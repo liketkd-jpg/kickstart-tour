@@ -206,7 +206,7 @@ const CHECK_PRESETS=['버스 탑승','호텔 출발','공연장 집합','식당 
 
 /* ---------- 상태 ---------- */
 const S={ sb:null, session:null, uid:null, anon:false, tours:[], tour:null, me:null,
-  members:[], stops:[], notices:[], acks:[], checks:[], marks:[], guides:[], journal:[], rate:1, knownLive:null, tab:null, day:null, channel:null, knownNotices:null, offline:false };
+  members:[], stops:[], notices:[], acks:[], checks:[], marks:[], guides:[], journal:[], cues:[], roommates:[], rate:1, knownLive:null, tab:null, day:null, channel:null, knownNotices:null, offline:false };
 const cfg=window.TOUR_CONFIG||{};
 { const r=Number(store.get('ttsRate')); if(r>0) S.rate=r; }
 const configured = cfg.SUPABASE_URL && !/YOUR-PROJECT/.test(cfg.SUPABASE_URL) && cfg.SUPABASE_ANON_KEY && !/YOUR-ANON-KEY/.test(cfg.SUPABASE_ANON_KEY);
@@ -221,6 +221,7 @@ const ICONS={
   guide:'<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>',
   check:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.5-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M15.5 11.5l2 2 4-4"/>',
   members:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.5-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.6 3.5 5.2"/>',
+  me:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.3-7 8-7s7 2.5 8 7"/>',
   pin:'<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'
 };
 function icon(name){ const sp=document.createElement('span'); sp.className='ico'; sp.setAttribute('aria-hidden','true');
@@ -352,13 +353,13 @@ async function openTour(t,tab){
   await loadAll(); subscribe(); render();
 }
 // 지도자 화면: 표 이름 ↔ 화면 상태 이름
-const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides',journal:'tour_journal'};
+const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides',journal:'tour_journal',cues:'tour_cues'};
 async function loadTable(tb){
   const id=S.tour.id; let q=S.sb.from(TABLES[tb]).select('*').eq('tour_id',id);
   if(tb==='notices'||tb==='checks') q=q.order('created_at',{ascending:false}).limit(60);
   if(tb==='stops') q=q.order('date').order('time');
   const r=await q;
-  if(r.error){ if(tb==='guides'||tb==='journal'){ S[tb]=[]; return; } throw r.error; }
+  if(r.error){ if(tb==='guides'||tb==='journal'||tb==='cues'){ S[tb]=[]; return; } throw r.error; }
   const key = tb==='check_marks'?'marks':tb; S[key]=r.data||[];
 }
 // 단원 화면: 열쇠(token) 하나로 내 원정 내용 한 번에 받기
@@ -366,18 +367,18 @@ async function loadStudent(){
   const r=await S.sb.rpc('tour_student_state',{p_token:S.token});
   if(r.error) throw r.error;
   const d=r.data; S.tour=d.tour; S.me=d.me; S.members=[d.me];
-  S.stops=d.stops||[]; S.notices=d.notices||[]; S.acks=d.acks||[]; S.checks=d.checks||[]; S.marks=d.marks||[]; S.guides=d.guides||[]; S.journal=d.journal||[];
+  S.stops=d.stops||[]; S.notices=d.notices||[]; S.acks=d.acks||[]; S.checks=d.checks||[]; S.marks=d.marks||[]; S.guides=d.guides||[]; S.journal=d.journal||[]; S.cues=d.cues||[]; S.roommates=d.roommates||[];
 }
 async function loadAll(){
   const ck='cache:'+(S.anon?'student':S.tour.id);
   try{
     if(S.anon) await loadStudent(); else await Promise.all(Object.keys(TABLES).map(loadTable));
     S.offline=false; $('netBar').hidden=true;
-    store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks,guides:S.guides,journal:S.journal}));
+    store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks,guides:S.guides,journal:S.journal,cues:S.cues,roommates:S.roommates}));
   }catch(err){
     if(/bad_token/.test(String(err&&err.message))){ store.set('tourToken',null); S.token=null; S.anon=false; S.tour=null; toast('원정에서 빠졌습니다. 다시 참가해 주세요'); screenJoin(''); throw err; }
     const c=store.get(ck);
-    if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks,guides:d.guides||[],journal:d.journal||[]}); if(S.anon) S.me=d.me; }catch(e){} }
+    if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks,guides:d.guides||[],journal:d.journal||[],cues:d.cues||[],roommates:d.roommates||[]}); if(S.anon) S.me=d.me; }catch(e){} }
     else if(!S.tour) throw err;
     S.offline=true; const nb=$('netBar'); nb.replaceChildren(h('span',{text:'인터넷이 끊겨 마지막으로 받은 내용을 보여 줍니다. 연결되면 저절로 새로 고칩니다.'})); nb.hidden=false;
   }
@@ -428,9 +429,11 @@ const liveGuide=()=>S.guides.filter(g=>g.live_at&&Date.now()-new Date(g.live_at)
 function render(){
   if(!S.tour) return;
   if(S.anon && !S.me){ screenJoin(''); return; }
-  topRight(L()? h('button',{class:'linkbtn',type:'button',onclick:()=>{ closeTour(); screenTours(); }},'원정 목록')
-              : armButton(h('button',{class:'linkbtn',type:'button'},'원정 나가기'),'나갑니다',leaveTour));
-  const tabs = L()? [['notices','공지'],['schedule','일정'],['guide','가이드'],['check','점검'],['members','단원']] : [['notices','공지'],['schedule','일정'],['guide','가이드'],['check','점검']];
+  topRight(h('div',{style:'display:flex;align-items:center;gap:4px'},
+    h('button',{class:'btn btn-red',type:'button',style:'min-height:36px;padding:0 14px;font-size:13px;border-radius:18px;box-shadow:none',onclick:emergencySheet},'긴급'),
+    L()? h('button',{class:'linkbtn',type:'button',onclick:()=>{ closeTour(); screenTours(); }},'원정 목록')
+       : armButton(h('button',{class:'linkbtn',type:'button'},'나가기'),'나갑니다',leaveTour)));
+  const tabs = L()? [['notices','공지'],['schedule','일정'],['guide','가이드'],['check','점검'],['members','단원']] : [['notices','공지'],['schedule','일정'],['guide','가이드'],['check','점검'],['me','내 정보']];
   if(!tabs.some(t=>t[0]===S.tab)) S.tab='notices';
   const unseen = S.anon ? S.notices.filter(n=>!S.acks.some(a=>a.notice_id===n.id&&a.member_id===S.me.id)).length : 0;
   const oc=openCheck(), myMarked = S.anon&&oc ? S.marks.some(m=>m.check_id===oc.id&&m.member_id===S.me.id) : true;
@@ -439,7 +442,7 @@ function render(){
   const days=tourDays(), di=days.indexOf(today());
   const eyebrow = (L()? 'LEADER · 초대 번호 '+S.tour.code : S.me.name+' · '+S.me.grp) + (di>=0? ' · '+(di+1)+'일째' : '');
   const head=h('div',{class:'title-block'},h('div',{class:'sub',text:eyebrow}),h('h1',{text:S.tour.name}));
-  const body = S.tab==='schedule'?viewSchedule() : S.tab==='guide'?viewGuide() : S.tab==='check'?viewCheck() : S.tab==='members'?viewMembers() : viewNotices();
+  const body = S.tab==='schedule'?viewSchedule() : S.tab==='guide'?viewGuide() : S.tab==='check'?viewCheck() : S.tab==='members'?viewMembers() : S.tab==='me'?viewMe() : viewNotices();
   main(head, tabBar, body);
 }
 function closeTour(){ if(S.channel){ S.sb.removeChannel(S.channel); S.channel=null; } S.tour=null; store.set('tourId',null); }
@@ -449,6 +452,7 @@ async function logout(){ closeTour(); await S.sb.auth.signOut(); S.session=null;
 /* ---------- 공지 ---------- */
 function viewNotices(){
   const wrap=h('div',{class:'stack'});
+  const bc=briefCard(); if(bc) wrap.append(bc);
   if(L()){
     const place=h('input',{class:'in',id:'nPlace',placeholder:'예: 카를교 동쪽 입구 탑 앞'});
     const link=h('input',{class:'in',id:'nLink',inputmode:'url',placeholder:'https://maps.app.goo.gl/…'});
@@ -532,7 +536,8 @@ function viewSchedule(){
         s.memo?h('span',{class:'muted',text:s.memo}):null),
       h('div',{style:'display:flex;flex-direction:column;gap:6px;align-items:flex-end'},
         has?h('a',{class:'maplink',href:dirUrl([s.place,s.city].filter(Boolean).join(', ')),target:'_blank',rel:'noopener'},'길 찾기'):null,
-        S.guides.some(g=>g.stop_id===s.id)?h('button',{class:'maplink',type:'button',onclick:()=>{ S.tab='guide'; S.openGuide=S.guides.find(g=>g.stop_id===s.id).id; render(); window.scrollTo(0,0); }},'해설 듣기'):null));
+        S.guides.some(g=>g.stop_id===s.id)?h('button',{class:'maplink',type:'button',onclick:()=>{ S.tab='guide'; S.openGuide=S.guides.find(g=>g.stop_id===s.id).id; render(); window.scrollTo(0,0); }},'해설 듣기'):null,
+        (s.type==='공연'||s.type==='리허설'||S.cues.some(c=>c.stop_id===s.id))?h('button',{class:'maplink',type:'button',style:'color:var(--red-ink)',onclick:()=>cueSheet(s)},'순서표'+(S.cues.some(c=>c.stop_id===s.id)?' '+S.cues.filter(c=>c.stop_id===s.id).length:'')):null));
   })));
   wrap.append(viewJournal(d));
   return wrap;
@@ -668,7 +673,7 @@ function shrinkPhoto(file){ return new Promise((res,rej)=>{ const img=new Image(
   img.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error('open')); }; img.src=u; }); }
 async function saveJournal(date, patch){
   const cur=S.journal.find(j=>j.date===date);
-  const row={tour_id:S.tour.id,date,memo:cur?cur.memo:'',photos:cur?cur.photos:[],...patch,updated_at:new Date().toISOString()};
+  const row={tour_id:S.tour.id,date,memo:cur?cur.memo:'',photos:cur?cur.photos:[],brief:cur?(cur.brief||''):'',...patch,updated_at:new Date().toISOString()};
   const r=await S.sb.from('tour_journal').upsert(row,{onConflict:'tour_id,date'}).select().single();
   if(r.error) throw r.error;
   S.journal=S.journal.filter(j=>j.date!==date).concat([r.data]);
@@ -733,6 +738,152 @@ ${dayHtml||'<p>아직 기록이 없습니다.</p>'}
 <p class="no"><button onclick="print()" style="font-size:14pt;padding:10px 20px">인쇄 · PDF로 저장</button></p></body></html>`;
   const w=window.open(URL.createObjectURL(new Blob([html],{type:'text/html'})),'_blank');
   if(!w) toast('새 창이 막혔습니다. 팝업 허용 뒤 다시 눌러 주세요');
+}
+
+/* ---------- 비상 연락처 ---------- */
+const DEFAULT_EMERGENCY=[
+  {label:'유럽 긴급 신고 (경찰·구급차·소방)',number:'112',note:'EU 어디서나 무료'},
+  {label:'외교부 영사콜센터 (24시간)',number:'+82-2-3210-0404',note:'해외 사건·사고 상담'},
+  {label:'대한민국 대사관',number:'',note:'방문 나라 대사관 번호를 넣어 주세요'},
+  {label:'숙소',number:'',note:''},
+  {label:'여행자 보험사',number:'',note:'증권 번호'}];
+const emergencyList=()=>{ const e=S.tour&&Array.isArray(S.tour.emergency)?S.tour.emergency:[]; return e.length?e:DEFAULT_EMERGENCY; };
+function emergencySheet(){
+  const rows=emergencyList();
+  const body=[h('span',{class:'muted',text:'번호를 누르면 전화가 걸립니다. 걸리지 않으면 번호를 길게 눌러 복사해 주세요.'})];
+  body.push(h('div',{class:'stack'},rows.map(r=>h('div',{class:'ncard',style:'gap:4px'},
+    h('span',{class:'ttl',text:r.label||'연락처'}),
+    r.number?h('a',{class:'ntime',style:'font-size:28px;color:var(--red-ink);text-decoration:none;user-select:all',href:'tel:'+r.number.replace(/[^0-9+]/g,'')},r.number):h('span',{class:'muted',text:'번호가 아직 없습니다'}),
+    r.note?h('span',{class:'muted',text:r.note}):null))));
+  if(L()) body.push(h('button',{class:'btn btn-ghost',type:'button',onclick:emergencyEdit},'연락처 고치기'));
+  openSheet('긴급 연락처',body);
+}
+function emergencyEdit(){
+  const rows=emergencyList().map(r=>({...r}));
+  const box=h('div',{class:'stack'});
+  const paint=()=>{ box.replaceChildren(...rows.map((r,i)=>{
+    const l=h('input',{class:'in',value:r.label||'',placeholder:'이름 (예: 주체코 대사관)'}); l.oninput=()=>r.label=l.value;
+    const n=h('input',{class:'in num',value:r.number||'',inputmode:'tel',placeholder:'+420 …'}); n.oninput=()=>r.number=n.value;
+    const t=h('input',{class:'in',value:r.note||'',placeholder:'메모'}); t.oninput=()=>r.note=t.value;
+    return h('div',{class:'panel',style:'padding:12px;gap:8px'},l,h('div',{class:'grid2'},n,t),h('button',{class:'linkbtn',type:'button',style:'align-self:flex-end;min-height:32px',onclick:()=>{ rows.splice(i,1); paint(); }},'빼기'));
+  })); };
+  paint();
+  const save=h('button',{class:'btn btn-red',type:'button'},'저장');
+  save.onclick=async()=>{ const clean=rows.map(r=>({label:(r.label||'').trim().slice(0,60),number:(r.number||'').trim().slice(0,40),note:(r.note||'').trim().slice(0,100)})).filter(r=>r.label||r.number);
+    const r=await S.sb.from('tour_tours').update({emergency:clean}).eq('id',S.tour.id).select().single();
+    if(r.error){ toast(errText(r.error)); return; } S.tour=r.data; closeSheet(); toast('긴급 연락처를 저장했습니다'); render(); };
+  openSheet('긴급 연락처 고치기',[box,h('button',{class:'btn btn-ghost',type:'button',onclick:()=>{ rows.push({label:'',number:'',note:''}); paint(); }},'+ 연락처 추가'),save]);
+}
+
+/* ---------- 오늘의 한 줄 안내 ---------- */
+function briefCard(){
+  const d=today(), j=S.journal.find(x=>x.date===d), text=(j&&j.brief)||'';
+  if(!L()){ if(!text) return null;
+    return h('section',{class:'hero',style:'gap:6px'},h('div',{class:'row'},h('span',{text:'오늘의 안내 · '+dayLabel(d)})),h('div',{class:'nmsg',style:'font-size:17px;font-weight:700;color:#fff',text:text})); }
+  const inp=h('textarea',{class:'in',style:'min-height:64px',placeholder:'예: 오늘 12도·비 예보, 우산 챙기기 · 기상 7시 · 조식 7시 반 · 8시 로비 집합'}); inp.value=text;
+  const sv=h('button',{class:'btn btn-navy',type:'button'},'안내 올리기');
+  sv.onclick=async()=>{ sv.disabled=true; try{ await saveJournal(d,{brief:inp.value.trim().slice(0,300)}); toast('오늘의 안내를 올렸습니다'); render(); }catch(e){ toast(errText(e)); } sv.disabled=false; };
+  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:'오늘의 한 줄 안내'}),h('span',{class:'muted',text:dayLabel(d)})),
+    h('span',{class:'muted',text:'단원 공지 화면 맨 위에 크게 보입니다.'}),inp,sv);
+}
+
+/* ---------- 단원 정보 (지도자) ---------- */
+const checklistItems=()=>Array.isArray(S.tour&&S.tour.checklist)?S.tour.checklist:[];
+const packedCount=m=>{ const items=checklistItems(), p=Array.isArray(m.packed)?m.packed:[]; return items.filter(x=>p.includes(x)).length; };
+function memberSheet(m){
+  const f={room:h('input',{class:'in',value:m.room||'',placeholder:'예: 305'}),seat:h('input',{class:'in',value:m.seat||'',placeholder:'예: 2호차 7번'}),
+    guardian:h('input',{class:'in',value:m.guardian||'',inputmode:'tel',placeholder:'보호자 이름·전화'}),passport:h('input',{class:'in num',value:m.passport_tail||'',placeholder:'끝 4자리',maxlength:'4'}),
+    health:h('textarea',{class:'in',placeholder:'알레르기, 복용 약, 주의할 점'})};
+  f.health.value=m.health||'';
+  const items=checklistItems(), p=Array.isArray(m.packed)?m.packed:[];
+  const save=h('button',{class:'btn btn-red',type:'button'},'저장');
+  save.onclick=async()=>{ const r=await S.sb.from('tour_members').update({room:f.room.value.trim().slice(0,20),seat:f.seat.value.trim().slice(0,30),guardian:f.guardian.value.trim().slice(0,100),passport_tail:f.passport.value.replace(/\D/g,'').slice(0,4),health:f.health.value.trim().slice(0,500)}).eq('id',m.id);
+    if(r.error){ toast(errText(r.error)); return; } closeSheet(); toast('저장했습니다'); reloadSoon('members'); };
+  openSheet(m.name+' · '+m.grp,[
+    h('div',{class:'grid2'},h('label',{class:'f'},'방 번호',f.room),h('label',{class:'f'},'버스 좌석',f.seat)),
+    h('label',{class:'f'},'건강·안전 메모 (지도자와 본인만 봄)',f.health),
+    h('div',{class:'grid2'},h('label',{class:'f'},'보호자 연락처',f.guardian),h('label',{class:'f'},'여권 번호 끝 4자리',f.passport)),
+    items.length?h('div',{class:'panel',style:'padding:12px'},h('h2',{text:'준비물 '+packedCount(m)+' / '+items.length}),
+      h('div',{class:'who'},items.map(x=>h('span',{class:p.includes(x)?'':'no',text:(p.includes(x)?'챙김 · ':'아직 · ')+x})))):null,
+    save]);
+}
+function roomsPanel(){
+  const rooms={}; S.members.forEach(m=>{ const k=(m.room||'').trim(); if(k) (rooms[k]=rooms[k]||[]).push(m.name); });
+  const keys=Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
+  const none=S.members.filter(m=>!(m.room||'').trim()).length;
+  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:'방 배정'}),h('span',{class:'muted',text:none?'방 없음 '+none+'명':'모두 배정'})),
+    keys.length? h('div',{class:'list'},keys.map(k=>h('div',{class:'row-item'},h('span',{class:'num',style:'font-weight:700;min-width:52px',text:k}),h('span',{class:'row-body',text:rooms[k].join(', ')}))))
+      : h('span',{class:'muted',text:'아래 단원 이름을 눌러 방 번호와 버스 좌석을 넣으면 여기에 모입니다.'}));
+}
+function checklistEditor(){
+  const items=checklistItems(), mem=S.members.filter(m=>m.token);
+  const ta=h('textarea',{class:'in',style:'min-height:120px',placeholder:'한 줄에 하나씩\n여권\n도복·띠\n시범 소품\n충전기·보조배터리\n상비약'}); ta.value=items.join('\n');
+  const sv=h('button',{class:'btn btn-ghost',type:'button'},'준비물 목록 저장');
+  sv.onclick=async()=>{ const list=[...new Set(ta.value.split('\n').map(x=>x.trim()).filter(Boolean))].slice(0,60);
+    const r=await S.sb.from('tour_tours').update({checklist:list}).eq('id',S.tour.id).select().single(); if(r.error){ toast(errText(r.error)); return; } S.tour=r.data; toast('준비물 목록을 저장했습니다'); render(); };
+  const done=items.length?mem.filter(m=>packedCount(m)===items.length).length:0;
+  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:'준비물 체크리스트'}),items.length?h('span',{class:'pill'+(done<mem.length?' warn':''),text:'다 챙김 '+done+' / '+mem.length}):null),
+    h('span',{class:'muted',text:'단원은 「내 정보」 칸에서 하나씩 체크합니다. 누가 덜 챙겼는지는 단원 이름 옆 숫자로 보입니다.'}),ta,sv);
+}
+
+/* ---------- 단원: 내 정보 ---------- */
+function viewMe(){
+  const wrap=h('div',{class:'stack'}), me=S.me, items=checklistItems(), packed=new Set(Array.isArray(me.packed)?me.packed:[]);
+  wrap.append(h('button',{class:'btn btn-red btn-big',type:'button',onclick:emergencySheet},'긴급 연락처'));
+  wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:'내 방'}),h('span',{text:me.seat?'버스 '+me.seat:'버스 좌석 미정'})),
+    h('div',{class:'big',style:'font-size:44px'},me.room||'미정'),
+    h('div',{class:'row'},h('span',{text:S.roommates.length?'함께 쓰는 친구: '+S.roommates.join(', '):(me.room?'혼자 쓰는 방':'지도자가 방을 정하면 여기에 보입니다')}))));
+  if(items.length){
+    const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:'준비물'}),h('span',{class:'pill'+(packed.size<items.length?' warn':''),text:items.filter(x=>packed.has(x)).length+' / '+items.length})));
+    sec.append(h('div',{class:'list'},items.map(x=>{ const cb=h('input',{type:'checkbox','aria-label':x}); cb.checked=packed.has(x);
+      cb.onchange=async()=>{ cb.checked?packed.add(x):packed.delete(x); const arr=items.filter(i=>packed.has(i)); me.packed=arr;
+        const r=await S.sb.rpc('tour_set_packed',{p_token:S.token,p_packed:arr}); if(r.error){ toast(errText(r.error)); cb.checked=!cb.checked; } else render(); };
+      return h('label',{class:'row-item'+(cb.checked?' done':''),style:'cursor:pointer'},cb,h('span',{class:'row-body'},h('span',{class:'ttl',text:x}))); })));
+    wrap.append(sec);
+  }
+  const health=h('textarea',{class:'in',placeholder:'알레르기, 복용 중인 약, 지도자가 알아야 할 점'}); health.value=me.health||'';
+  const guardian=h('input',{class:'in',value:me.guardian||'',inputmode:'tel',placeholder:'보호자 이름·전화번호'});
+  const sv=h('button',{class:'btn btn-ghost',type:'button'},'저장');
+  sv.onclick=async()=>{ sv.disabled=true; const r=await S.sb.rpc('tour_update_me',{p_token:S.token,p_health:health.value.trim(),p_guardian:guardian.value.trim()}); sv.disabled=false;
+    if(r.error) toast(errText(r.error)); else { me.health=health.value.trim(); me.guardian=guardian.value.trim(); toast('지도자께 전달했습니다'); } };
+  wrap.append(h('section',{class:'panel'},h('h2',{text:'건강·안전 메모'}),h('span',{class:'muted',text:'지도자만 볼 수 있습니다. 아플 때 빨리 도와드리기 위해 씁니다.'}),
+    h('label',{class:'f'},'알레르기·약·주의할 점',health),h('label',{class:'f'},'보호자 연락처',guardian),sv));
+  wrap.append(locationButton());
+  return wrap;
+}
+
+/* ---------- 공연 순서표 ---------- */
+function cueSheet(stop){
+  const cues=()=>S.cues.filter(c=>c.stop_id===stop.id).sort((a,b)=>a.seq-b.seq||String(a.created_at).localeCompare(String(b.created_at)));
+  const draw=()=>{
+    const list=cues();
+    const body=[h('span',{class:'muted',text:dayLabel(stop.date)+(stop.time?' '+stop.time:'')+(stop.place?' · '+stop.place:'')})];
+    body.push(list.length? h('div',{class:'list'},list.map((c,i)=>h('div',{class:'row-item'},
+      h('span',{class:'num',style:'font-size:22px;font-weight:700;min-width:30px;color:var(--red-ink)',text:String(i+1)}),
+      h('div',{class:'row-body'},h('span',{class:'ttl',text:c.title}),
+        c.music?h('span',{class:'muted',text:'음악 '+c.music}):null, c.who?h('span',{class:'muted',text:'출연 '+c.who}):null,
+        c.props?h('span',{class:'muted',text:'소품 '+c.props}):null, c.duration?h('span',{class:'muted',text:'시간 '+c.duration}):null),
+      L()?h('div',{style:'display:flex;flex-direction:column;gap:4px'},
+        i>0?h('button',{class:'maplink',type:'button','aria-label':'위로',onclick:()=>move(i,-1)},'↑'):null,
+        i<list.length-1?h('button',{class:'maplink',type:'button','aria-label':'아래로',onclick:()=>move(i,1)},'↓'):null,
+        armButton(h('button',{class:'maplink',type:'button'},'빼기'),'뺌',async()=>{ const r=await S.sb.from('tour_cues').delete().eq('id',c.id); if(r.error) toast(errText(r.error)); else { S.cues=S.cues.filter(x=>x.id!==c.id); draw(); } })):null)))
+      : h('div',{class:'empty'},h('strong',{text:'순서표가 아직 없습니다'}),h('span',{text:L()?'아래에서 순서를 하나씩 넣어 주세요.':'지도자가 순서표를 만들면 여기에 보입니다.'})));
+    if(L()){
+      const f={title:h('input',{class:'in',placeholder:'예: 오프닝 품새'}),music:h('input',{class:'in',placeholder:'음악 파일 이름'}),who:h('input',{class:'in',placeholder:'출연 단원'}),props:h('input',{class:'in',placeholder:'격파 송판 20장 등'}),duration:h('input',{class:'in',placeholder:'예: 2분 30초'})};
+      const add=h('button',{class:'btn btn-red',type:'button'},'순서 추가');
+      add.onclick=async()=>{ if(!f.title.value.trim()){ toast('순서 이름을 넣어 주세요'); f.title.focus(); return; }
+        const seq=(list.length?Math.max(...list.map(c=>c.seq)):0)+1;
+        const r=await S.sb.from('tour_cues').insert({tour_id:S.tour.id,stop_id:stop.id,seq,title:f.title.value.trim().slice(0,80),music:f.music.value.trim().slice(0,120),who:f.who.value.trim().slice(0,200),props:f.props.value.trim().slice(0,200),duration:f.duration.value.trim().slice(0,20)}).select().single();
+        if(r.error){ toast(errText(r.error)); return; } S.cues.push(r.data); draw(); };
+      body.push(h('section',{class:'panel'},h('h2',{text:'순서 추가'}),h('label',{class:'f'},'순서 이름',f.title),h('div',{class:'grid2'},h('label',{class:'f'},'음악',f.music),h('label',{class:'f'},'시간',f.duration)),h('label',{class:'f'},'출연',f.who),h('label',{class:'f'},'소품',f.props),add));
+    }
+    openSheet(stop.title+' 순서표',body);
+  };
+  const move=async(i,dir)=>{ const list=cues(), a=list[i], b=list[i+dir]; if(!a||!b) return;
+    const sa=a.seq, sb=b.seq===a.seq?a.seq+dir:b.seq;
+    const r1=await S.sb.from('tour_cues').update({seq:sb}).eq('id',a.id), r2=await S.sb.from('tour_cues').update({seq:sa}).eq('id',b.id);
+    if(r1.error||r2.error){ toast('순서를 바꾸지 못했습니다'); return; } a.seq=sb; b.seq=sa; draw(); };
+  draw();
 }
 
 /* ---------- 인원 점검 ---------- */
@@ -811,7 +962,9 @@ function viewMembers(){
   const mem=[...S.members].sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   wrap.append(h('section',{class:'panel'},h('h2',{text:'단원 '+mem.length+'명'}),
     mem.length? h('div',{class:'list',style:'padding:0;background:none'},mem.map(m=>h('div',{class:'row-item'},
-      h('div',{class:'row-body'},h('span',{class:'ttl',text:m.name+' · '+m.grp}),h('span',{class:'muted',text:m.token?(hm(m.joined_at)+' 참가'+(m.last_loc_at?' · 위치 '+ago(m.last_loc_at):'')):'휴대폰 없이 추가'})),
+      h('button',{class:'row-body',type:'button',onclick:()=>memberSheet(m)},h('span',{class:'ttl'},m.name+' · '+m.grp,m.health?h('span',{class:'tag show',style:'margin-left:6px',text:'건강 메모'}):null),
+        h('span',{class:'muted',text:[m.room?m.room+'호':'',m.seat?'버스 '+m.seat:'',checklistItems().length&&m.token?'준비물 '+packedCount(m)+'/'+checklistItems().length:''].filter(Boolean).join(' · ')||'눌러서 방·좌석·건강 메모 넣기'}),
+        h('span',{class:'muted',text:m.token?(hm(m.joined_at)+' 참가'+(m.last_loc_at?' · 위치 '+ago(m.last_loc_at):'')):'휴대폰 없이 추가'})),
       m.last_lat!=null?h('a',{class:'maplink',href:posUrl(m.last_lat,m.last_lng),target:'_blank',rel:'noopener'},'위치'):null,
       armButton(h('button',{class:'maplink',type:'button'},'빼기'),'뺍니다',async()=>{ const r=await S.sb.from('tour_members').delete().eq('id',m.id); if(r.error) toast(errText(r.error)); else reloadSoon('members'); }))))
       : h('span',{class:'muted',text:'아직 참가한 단원이 없습니다.'}),
@@ -821,6 +974,7 @@ function viewMembers(){
   sv.onclick=async()=>{ if(!tn.value.trim()){ toast('원정 이름을 넣어 주세요'); return; } if(ts.value&&te.value&&te.value<ts.value){ toast('돌아오는 날이 출발일보다 빠릅니다'); return; }
     const r=await S.sb.from('tour_tours').update({name:tn.value.trim(),start_date:ts.value||null,end_date:te.value||null}).eq('id',S.tour.id).select().single();
     if(r.error) toast(errText(r.error)); else { S.tour=r.data; toast('저장했습니다'); render(); } };
+  wrap.append(roomsPanel(), checklistEditor());
   wrap.append(h('section',{class:'panel'},h('h2',{text:'원정 정보'}),h('label',{class:'f'},'원정 이름',tn),h('div',{class:'grid2'},h('label',{class:'f'},'출발일',ts),h('label',{class:'f'},'돌아오는 날',te)),sv));
   return wrap;
 }

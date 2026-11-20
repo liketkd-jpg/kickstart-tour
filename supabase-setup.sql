@@ -101,6 +101,31 @@ create table if not exists public.tour_journal (
   updated_at timestamptz not null default now(),
   unique (tour_id, date)
 );
+alter table public.tour_journal add column if not exists brief text not null default '';
+-- 2단계: 비상 연락처·준비물(원정), 방·좌석·건강 메모(단원), 오늘의 안내(일지), 공연 순서표
+alter table public.tour_tours add column if not exists emergency jsonb not null default '[]'::jsonb;
+alter table public.tour_tours add column if not exists checklist jsonb not null default '[]'::jsonb;
+alter table public.tour_members add column if not exists room text not null default '';
+alter table public.tour_members add column if not exists seat text not null default '';
+alter table public.tour_members add column if not exists health text not null default '';
+alter table public.tour_members add column if not exists guardian text not null default '';
+alter table public.tour_members add column if not exists passport_tail text not null default '';
+alter table public.tour_members add column if not exists packed jsonb not null default '[]'::jsonb;
+
+create table if not exists public.tour_cues (
+  id uuid primary key default gen_random_uuid(),
+  tour_id uuid not null references public.tour_tours(id) on delete cascade,
+  stop_id uuid references public.tour_stops(id) on delete cascade,
+  seq int not null default 0,
+  title text not null,
+  music text not null default '',
+  who text not null default '',
+  props text not null default '',
+  duration text not null default '',
+  created_at timestamptz not null default now()
+);
+create index if not exists tour_cues_tour on public.tour_cues(tour_id, stop_id, seq);
+
 create index if not exists tour_members_tour on public.tour_members(tour_id);
 create index if not exists tour_stops_tour on public.tour_stops(tour_id, date);
 create index if not exists tour_notices_tour on public.tour_notices(tour_id, created_at desc);
@@ -124,6 +149,7 @@ alter table public.tour_checks enable row level security;
 alter table public.tour_check_marks enable row level security;
 alter table public.tour_guides enable row level security;
 alter table public.tour_journal enable row level security;
+alter table public.tour_cues enable row level security;
 
 drop policy if exists tour_tours_owner on public.tour_tours;
 create policy tour_tours_owner on public.tour_tours for all to authenticated
@@ -147,6 +173,10 @@ create policy tour_acks_owner on public.tour_acks for all to authenticated
 
 drop policy if exists tour_checks_owner on public.tour_checks;
 create policy tour_checks_owner on public.tour_checks for all to authenticated
+  using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
+
+drop policy if exists tour_cues_owner on public.tour_cues;
+create policy tour_cues_owner on public.tour_cues for all to authenticated
   using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
 
 drop policy if exists tour_journal_owner on public.tour_journal;
@@ -183,15 +213,17 @@ begin
   if m.id is null then raise exception 'bad_token'; end if;
   select * into t from tour_tours where id = m.tour_id;
   return json_build_object(
-    'tour', json_build_object('id', t.id, 'name', t.name, 'code', t.code, 'start_date', t.start_date, 'end_date', t.end_date),
-    'me', json_build_object('id', m.id, 'name', m.name, 'grp', m.grp),
+    'tour', json_build_object('id', t.id, 'name', t.name, 'code', t.code, 'start_date', t.start_date, 'end_date', t.end_date, 'emergency', t.emergency, 'checklist', t.checklist),
+    'me', json_build_object('id', m.id, 'name', m.name, 'grp', m.grp, 'room', m.room, 'seat', m.seat, 'health', m.health, 'guardian', m.guardian, 'packed', m.packed),
+    'roommates', coalesce((select json_agg(r.name order by r.name) from tour_members r where r.tour_id = t.id and m.room <> '' and r.room = m.room and r.id <> m.id), '[]'::json),
+    'cues', coalesce((select json_agg(c order by c.seq, c.created_at) from (select id, stop_id, seq, title, music, who, props, duration, created_at from tour_cues where tour_id = t.id) c), '[]'::json),
     'stops', coalesce((select json_agg(s order by s.date, s.time) from (select id, date, time, type, title, place, city, contact, memo, done from tour_stops where tour_id = t.id) s), '[]'::json),
     'notices', coalesce((select json_agg(n order by n.created_at desc) from (select id, date, time, place, link, message, created_at from tour_notices where tour_id = t.id order by created_at desc limit 60) n), '[]'::json),
     'acks', coalesce((select json_agg(a) from (select notice_id, member_id, seen_at from tour_acks where member_id = m.id) a), '[]'::json),
     'checks', coalesce((select json_agg(c order by c.created_at desc) from (select id, title, closed, created_at from tour_checks where tour_id = t.id order by created_at desc limit 20) c), '[]'::json),
     'marks', coalesce((select json_agg(k) from (select check_id, member_id, marked_at from tour_check_marks where member_id = m.id) k), '[]'::json),
     'guides', coalesce((select json_agg(g order by g.created_at desc) from (select id, stop_id, title, script, source_url, live_at, created_at from tour_guides where tour_id = t.id order by created_at desc limit 50) g), '[]'::json),
-    'journal', coalesce((select json_agg(j order by j.date) from (select id, date, memo, photos from tour_journal where tour_id = t.id) j), '[]'::json)
+    'journal', coalesce((select json_agg(j order by j.date) from (select id, date, memo, photos, brief from tour_journal where tour_id = t.id) j), '[]'::json)
   );
 end; $$;
 
@@ -221,6 +253,24 @@ begin
   update tour_members set last_lat = p_lat, last_lng = p_lng, last_loc_at = now() where token = p_token;
 end; $$;
 
+create or replace function public.tour_update_me(p_token uuid, p_health text, p_guardian text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update tour_members set health = left(coalesce(p_health, ''), 500), guardian = left(coalesce(p_guardian, ''), 100) where token = p_token;
+end; $$;
+
+create or replace function public.tour_set_packed(p_token uuid, p_packed jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if jsonb_typeof(p_packed) <> 'array' or jsonb_array_length(p_packed) > 100 then raise exception 'bad_list'; end if;
+  update tour_members set packed = p_packed where token = p_token;
+end; $$;
+
+revoke all on function public.tour_update_me(uuid, text, text) from public;
+revoke all on function public.tour_set_packed(uuid, jsonb) from public;
+grant execute on function public.tour_update_me(uuid, text, text) to anon, authenticated;
+grant execute on function public.tour_set_packed(uuid, jsonb) to anon, authenticated;
+
 revoke all on function public.tour_join(text, text, text) from public;
 revoke all on function public.tour_student_state(uuid) from public;
 revoke all on function public.tour_ack(uuid, uuid) from public;
@@ -236,7 +286,7 @@ grant execute on function public.tour_share_location(uuid, double precision, dou
 do $$
 declare t text;
 begin
-  foreach t in array array['tour_members','tour_stops','tour_notices','tour_acks','tour_checks','tour_check_marks','tour_guides','tour_journal'] loop
+  foreach t in array array['tour_members','tour_stops','tour_notices','tour_acks','tour_checks','tour_check_marks','tour_guides','tour_journal','tour_cues'] loop
     if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
       execute format('alter publication supabase_realtime add table public.%I', t);
     end if;
