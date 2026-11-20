@@ -178,7 +178,7 @@ const CHECK_PRESETS=['버스 탑승','호텔 출발','공연장 집합','식당 
 
 /* ---------- 상태 ---------- */
 const S={ sb:null, session:null, uid:null, anon:false, tours:[], tour:null, me:null,
-  members:[], stops:[], notices:[], acks:[], checks:[], marks:[], guides:[], rate:1, knownLive:null, tab:null, day:null, channel:null, knownNotices:null, offline:false };
+  members:[], stops:[], notices:[], acks:[], checks:[], marks:[], guides:[], journal:[], rate:1, knownLive:null, tab:null, day:null, channel:null, knownNotices:null, offline:false };
 const cfg=window.TOUR_CONFIG||{};
 { const r=Number(store.get('ttsRate')); if(r>0) S.rate=r; }
 const configured = cfg.SUPABASE_URL && !/YOUR-PROJECT/.test(cfg.SUPABASE_URL) && cfg.SUPABASE_ANON_KEY && !/YOUR-ANON-KEY/.test(cfg.SUPABASE_ANON_KEY);
@@ -305,13 +305,13 @@ async function openTour(t,tab){
   await loadAll(); subscribe(); render();
 }
 // 지도자 화면: 표 이름 ↔ 화면 상태 이름
-const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides'};
+const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides',journal:'tour_journal'};
 async function loadTable(tb){
   const id=S.tour.id; let q=S.sb.from(TABLES[tb]).select('*').eq('tour_id',id);
   if(tb==='notices'||tb==='checks') q=q.order('created_at',{ascending:false}).limit(60);
   if(tb==='stops') q=q.order('date').order('time');
   const r=await q;
-  if(r.error){ if(tb==='guides'){ S.guides=[]; return; } throw r.error; }
+  if(r.error){ if(tb==='guides'||tb==='journal'){ S[tb]=[]; return; } throw r.error; }
   const key = tb==='check_marks'?'marks':tb; S[key]=r.data||[];
 }
 // 단원 화면: 열쇠(token) 하나로 내 원정 내용 한 번에 받기
@@ -319,18 +319,18 @@ async function loadStudent(){
   const r=await S.sb.rpc('tour_student_state',{p_token:S.token});
   if(r.error) throw r.error;
   const d=r.data; S.tour=d.tour; S.me=d.me; S.members=[d.me];
-  S.stops=d.stops||[]; S.notices=d.notices||[]; S.acks=d.acks||[]; S.checks=d.checks||[]; S.marks=d.marks||[]; S.guides=d.guides||[];
+  S.stops=d.stops||[]; S.notices=d.notices||[]; S.acks=d.acks||[]; S.checks=d.checks||[]; S.marks=d.marks||[]; S.guides=d.guides||[]; S.journal=d.journal||[];
 }
 async function loadAll(){
   const ck='cache:'+(S.anon?'student':S.tour.id);
   try{
     if(S.anon) await loadStudent(); else await Promise.all(Object.keys(TABLES).map(loadTable));
     S.offline=false; $('netBar').hidden=true;
-    store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks,guides:S.guides}));
+    store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks,guides:S.guides,journal:S.journal}));
   }catch(err){
     if(/bad_token/.test(String(err&&err.message))){ store.set('tourToken',null); S.token=null; S.anon=false; S.tour=null; toast('원정에서 빠졌습니다. 다시 참가해 주세요'); screenJoin(''); throw err; }
     const c=store.get(ck);
-    if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks,guides:d.guides||[]}); if(S.anon) S.me=d.me; }catch(e){} }
+    if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks,guides:d.guides||[],journal:d.journal||[]}); if(S.anon) S.me=d.me; }catch(e){} }
     else if(!S.tour) throw err;
     S.offline=true; const nb=$('netBar'); nb.replaceChildren(h('span',{text:'인터넷이 끊겨 마지막으로 받은 내용을 보여 줍니다. 연결되면 저절로 새로 고칩니다.'})); nb.hidden=false;
   }
@@ -468,8 +468,8 @@ function viewSchedule(){
     h('div',{class:'row'},h('span',{text:days.length?dayNo(d,days)+'일째':'오늘'}),h('span',{text:'체크 '+rows.filter(s=>s.done).length+' / '+rows.length})),
     h('div',{style:'font-size:26px;font-weight:900;line-height:1.2',text:dayLabel(d)}),
     h('div',{class:'row'},h('span',{text:cities.length?cities.join(' → '):'도시를 넣으면 여기에 보입니다'}))));
-  if(L()) wrap.append(h('button',{class:'btn btn-red',type:'button',onclick:()=>stopSheet({date:d})},'일정 추가'));
-  if(!rows.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:'이날 일정이 아직 없습니다'}),h('span',{text:L()?'「일정 추가」로 넣어 주세요.':'지도자가 일정을 넣으면 여기에 보입니다.'}))); return wrap; }
+  if(L()) wrap.append(h('div',{class:'actions'},h('button',{class:'btn btn-red',type:'button',onclick:()=>stopSheet({date:d})},'일정 추가'),h('button',{class:'btn btn-line',type:'button',onclick:openReport},'활동 보고서 만들기')));
+  if(!rows.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:'이날 일정이 아직 없습니다'}),h('span',{text:L()?'「일정 추가」로 넣어 주세요.':'지도자가 일정을 넣으면 여기에 보입니다.'})), viewJournal(d)); return wrap; }
   wrap.append(h('div',{class:'list'},rows.map(s=>{
     const cb=h('input',{type:'checkbox','aria-label':s.title+' 다녀옴'}); cb.checked=!!s.done; cb.disabled=!L();
     cb.onchange=async()=>{ const r=await S.sb.from('tour_stops').update({done:cb.checked}).eq('id',s.id); if(r.error){ cb.checked=!cb.checked; toast(errText(r.error)); } else reloadSoon('stops'); };
@@ -485,6 +485,7 @@ function viewSchedule(){
         has?h('a',{class:'maplink',href:dirUrl([s.place,s.city].filter(Boolean).join(', ')),target:'_blank',rel:'noopener'},'길 찾기'):null,
         S.guides.some(g=>g.stop_id===s.id)?h('button',{class:'maplink',type:'button',onclick:()=>{ S.tab='guide'; S.openGuide=S.guides.find(g=>g.stop_id===s.id).id; render(); window.scrollTo(0,0); }},'해설 듣기'):null));
   })));
+  wrap.append(viewJournal(d));
   return wrap;
 }
 function stopSheet(s){
@@ -608,6 +609,81 @@ function viewGuide(){
     wrap.append(card);
   });
   return wrap;
+}
+
+/* ---------- 활동 일지 (날마다 사진·메모) ---------- */
+const BUCKET='tour-photos';
+const photoUrl=p=>S.sb.storage.from(BUCKET).getPublicUrl(p).data.publicUrl;
+function shrinkPhoto(file){ return new Promise((res,rej)=>{ const img=new Image(), u=URL.createObjectURL(file);
+  img.onload=()=>{ const M=1600, w=img.naturalWidth, hh=img.naturalHeight, k=Math.min(1,M/Math.max(w,hh)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*k)); c.height=Math.max(1,Math.round(hh*k)); c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(u); c.toBlob(b=>b?res(b):rej(new Error('blob')),'image/jpeg',0.82); };
+  img.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error('open')); }; img.src=u; }); }
+async function saveJournal(date, patch){
+  const cur=S.journal.find(j=>j.date===date);
+  const row={tour_id:S.tour.id,date,memo:cur?cur.memo:'',photos:cur?cur.photos:[],...patch,updated_at:new Date().toISOString()};
+  const r=await S.sb.from('tour_journal').upsert(row,{onConflict:'tour_id,date'}).select().single();
+  if(r.error) throw r.error;
+  S.journal=S.journal.filter(j=>j.date!==date).concat([r.data]);
+}
+function viewJournal(d){
+  const j=S.journal.find(x=>x.date===d)||{memo:'',photos:[]};
+  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:8px'},h('h2',{text:'오늘의 기록'}),h('span',{class:'muted',text:'사진 '+j.photos.length+'장'})));
+  if(j.photos.length){
+    sec.append(h('div',{style:'display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px'},j.photos.map(p=>{
+      const cell=h('div',{style:'position:relative'},h('a',{href:photoUrl(p),target:'_blank',rel:'noopener'},h('img',{src:photoUrl(p),alt:dayLabel(d)+' 활동 사진',loading:'lazy',style:'width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:var(--soft)'})));
+      if(L()) cell.append(armButton(h('button',{type:'button','aria-label':'사진 지우기',style:'position:absolute;top:4px;right:4px;min-height:28px;border:0;border-radius:14px;padding:0 8px;background:rgba(11,18,32,.7);color:#fff;font-size:12px'},'지우기'),'지움',async()=>{
+        try{ await saveJournal(d,{photos:j.photos.filter(x=>x!==p)}); S.sb.storage.from(BUCKET).remove([p]).catch(()=>{}); toast('사진을 지웠습니다'); render(); }catch(e){ toast(errText(e)); } }));
+      return cell; })));
+  } else if(!L() && !j.memo) sec.append(h('span',{class:'muted',text:'아직 이날 기록이 없습니다.'}));
+  if(L()){
+    const memo=h('textarea',{class:'in',placeholder:'예: 구시가지 광장 공연, 관객 반응 아주 좋았음. 다음 공연은 매트 추가.'}); memo.value=j.memo||'';
+    const pick=h('input',{type:'file',accept:'image/*',multiple:true,hidden:true});
+    const add=h('button',{class:'btn btn-navy',type:'button',onclick:()=>pick.click()},'사진 올리기');
+    pick.onchange=async()=>{
+      const files=[...pick.files].slice(0,20); pick.value=''; if(!files.length) return;
+      add.disabled=true; const added=[];
+      for(let i=0;i<files.length;i++){
+        add.textContent='올리는 중 '+(i+1)+' / '+files.length;
+        try{ const b=await shrinkPhoto(files[i]); const path=S.tour.id+'/'+d+'/'+crypto.randomUUID()+'.jpg';
+          const r=await S.sb.storage.from(BUCKET).upload(path,b,{contentType:'image/jpeg',upsert:false}); if(r.error) throw r.error; added.push(path); }
+        catch(e){ toast('사진 한 장을 올리지 못했습니다'); }
+      }
+      try{ if(added.length){ const cur=S.journal.find(x=>x.date===d); await saveJournal(d,{photos:(cur?cur.photos:[]).concat(added)}); toast('사진 '+added.length+'장을 올렸습니다'); } }
+      catch(e){ toast(errText(e)); }
+      add.disabled=false; add.textContent='사진 올리기'; render();
+    };
+    const save=h('button',{class:'btn btn-ghost',type:'button'},'메모 저장');
+    save.onclick=async()=>{ save.disabled=true; try{ await saveJournal(d,{memo:memo.value.trim().slice(0,3000)}); toast('메모를 저장했습니다'); }catch(e){ toast(errText(e)); } save.disabled=false; };
+    sec.append(h('label',{class:'f'},'메모',memo), h('div',{class:'actions'},add,save), pick,
+      h('span',{class:'muted',text:'사진은 짐작할 수 없는 긴 주소로 저장되어 앱 안에서만 보입니다. 단원 화면에도 이날 기록이 보입니다. 마지막에 「활동 보고서 만들기」로 날짜별 일정·점검·메모·사진을 한 번에 인쇄하거나 PDF로 저장할 수 있습니다.'}));
+  } else if(j.memo) sec.append(h('div',{class:'nmsg',text:j.memo}));
+  return sec;
+}
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function openReport(){
+  const days=tourDays(); const t=S.tour;
+  const dayHtml=days.map(d=>{
+    const st=S.stops.filter(s=>s.date===d).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+    const j=S.journal.find(x=>x.date===d); const ck=S.checks.filter(c=>ymd(new Date(c.created_at))===d);
+    if(!st.length && !j && !ck.length) return '';
+    return `<section><h2>${dayNo(d,days)}일째 · ${esc(dayLabel(d))}</h2>
+      ${st.length?`<table><tr><th>시간</th><th>일정</th><th>장소</th><th>완료</th></tr>${st.map(s=>`<tr><td>${esc(s.time)}</td><td>${esc(s.title)} <small>${esc(s.type)}</small></td><td>${esc([s.place,s.city].filter(Boolean).join(' · '))}</td><td>${s.done?'○':''}</td></tr>`).join('')}</table>`:''}
+      ${ck.length?`<p class="m">인원 점검: ${ck.map(c=>esc(c.title)+' '+S.marks.filter(m=>m.check_id===c.id).length+'/'+S.members.length+'명').join(', ')}</p>`:''}
+      ${j&&j.memo?`<p>${esc(j.memo).replace(/\n/g,'<br>')}</p>`:''}
+      ${j&&j.photos.length?`<div class="ph">${j.photos.map(p=>`<img src="${esc(photoUrl(p))}" alt="">`).join('')}</div>`:''}</section>`;
+  }).join('');
+  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(t.name)} 활동 보고서</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap">
+<style>body{font-family:'Noto Sans KR',sans-serif;color:#0B1220;margin:0;padding:32px;max-width:860px;margin:auto;font-size:12pt;line-height:1.6;word-break:keep-all}
+header{border-bottom:3px solid #14245C;padding-bottom:12px;margin-bottom:20px}header b{color:#D42A25;letter-spacing:.08em}h1{margin:6px 0 2px;font-size:24pt}
+h2{font-size:14pt;color:#14245C;border-left:4px solid #D42A25;padding-left:8px;margin:24px 0 8px}section{break-inside:avoid-page}
+table{width:100%;border-collapse:collapse;font-size:10.5pt}th,td{border-bottom:1px solid #DDE1E8;padding:5px 6px;text-align:left}th{background:#EEF1F8}small{color:#5B6472}
+.m{color:#5B6472;font-size:10.5pt}.ph{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px}
+.sum{display:flex;gap:24px;color:#5B6472}.no{margin-top:24px}@media print{body{padding:0}.no{display:none}}</style></head><body>
+<header><b>KICKSTART UP</b><h1>${esc(t.name)} 활동 보고서</h1><div class="sum"><span>${esc([t.start_date&&dayLabel(t.start_date),t.end_date&&dayLabel(t.end_date)].filter(Boolean).join(' ~ '))}</span><span>단원 ${S.members.length}명</span><span>일정 ${S.stops.length}개</span><span>공지 ${S.notices.length}건</span></div></header>
+${dayHtml||'<p>아직 기록이 없습니다.</p>'}
+<p class="no"><button onclick="print()" style="font-size:14pt;padding:10px 20px">인쇄 · PDF로 저장</button></p></body></html>`;
+  const w=window.open(URL.createObjectURL(new Blob([html],{type:'text/html'})),'_blank');
+  if(!w) toast('새 창이 막혔습니다. 팝업 허용 뒤 다시 눌러 주세요');
 }
 
 /* ---------- 인원 점검 ---------- */

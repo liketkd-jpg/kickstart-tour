@@ -91,6 +91,16 @@ create table if not exists public.tour_guides (
 );
 
 create index if not exists tour_guides_tour on public.tour_guides(tour_id);
+
+create table if not exists public.tour_journal (
+  id uuid primary key default gen_random_uuid(),
+  tour_id uuid not null references public.tour_tours(id) on delete cascade,
+  date date not null,
+  memo text not null default '',
+  photos text[] not null default '{}',
+  updated_at timestamptz not null default now(),
+  unique (tour_id, date)
+);
 create index if not exists tour_members_tour on public.tour_members(tour_id);
 create index if not exists tour_stops_tour on public.tour_stops(tour_id, date);
 create index if not exists tour_notices_tour on public.tour_notices(tour_id, created_at desc);
@@ -113,6 +123,7 @@ alter table public.tour_acks enable row level security;
 alter table public.tour_checks enable row level security;
 alter table public.tour_check_marks enable row level security;
 alter table public.tour_guides enable row level security;
+alter table public.tour_journal enable row level security;
 
 drop policy if exists tour_tours_owner on public.tour_tours;
 create policy tour_tours_owner on public.tour_tours for all to authenticated
@@ -136,6 +147,10 @@ create policy tour_acks_owner on public.tour_acks for all to authenticated
 
 drop policy if exists tour_checks_owner on public.tour_checks;
 create policy tour_checks_owner on public.tour_checks for all to authenticated
+  using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
+
+drop policy if exists tour_journal_owner on public.tour_journal;
+create policy tour_journal_owner on public.tour_journal for all to authenticated
   using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
 
 drop policy if exists tour_guides_owner on public.tour_guides;
@@ -175,7 +190,8 @@ begin
     'acks', coalesce((select json_agg(a) from (select notice_id, member_id, seen_at from tour_acks where member_id = m.id) a), '[]'::json),
     'checks', coalesce((select json_agg(c order by c.created_at desc) from (select id, title, closed, created_at from tour_checks where tour_id = t.id order by created_at desc limit 20) c), '[]'::json),
     'marks', coalesce((select json_agg(k) from (select check_id, member_id, marked_at from tour_check_marks where member_id = m.id) k), '[]'::json),
-    'guides', coalesce((select json_agg(g order by g.created_at desc) from (select id, stop_id, title, script, source_url, live_at, created_at from tour_guides where tour_id = t.id order by created_at desc limit 50) g), '[]'::json)
+    'guides', coalesce((select json_agg(g order by g.created_at desc) from (select id, stop_id, title, script, source_url, live_at, created_at from tour_guides where tour_id = t.id order by created_at desc limit 50) g), '[]'::json),
+    'journal', coalesce((select json_agg(j order by j.date) from (select id, date, memo, photos from tour_journal where tour_id = t.id) j), '[]'::json)
   );
 end; $$;
 
@@ -220,9 +236,29 @@ grant execute on function public.tour_share_location(uuid, double precision, dou
 do $$
 declare t text;
 begin
-  foreach t in array array['tour_members','tour_stops','tour_notices','tour_acks','tour_checks','tour_check_marks','tour_guides'] loop
+  foreach t in array array['tour_members','tour_stops','tour_notices','tour_acks','tour_checks','tour_check_marks','tour_guides','tour_journal'] loop
     if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
       execute format('alter publication supabase_realtime add table public.%I', t);
     end if;
   end loop;
 end $$;
+
+-- ───────── 활동 일지 사진 저장 공간 ─────────
+-- 사진 주소는 아무도 짐작할 수 없는 긴 이름으로 만들어집니다. 올리기·지우기는 그 원정의 지도자만 할 수 있습니다.
+insert into storage.buckets (id, name, public) values ('tour-photos', 'tour-photos', true)
+on conflict (id) do nothing;
+
+create or replace function public.tour_path_owner(p text) returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare t uuid;
+begin
+  begin t := split_part(p, '/', 1)::uuid; exception when others then return false; end;
+  return exists (select 1 from tour_tours where id = t and owner_id = auth.uid());
+end; $$;
+
+drop policy if exists tour_photos_insert on storage.objects;
+create policy tour_photos_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'tour-photos' and public.tour_path_owner(name));
+drop policy if exists tour_photos_delete on storage.objects;
+create policy tour_photos_delete on storage.objects for delete to authenticated
+  using (bucket_id = 'tour-photos' and public.tour_path_owner(name));
