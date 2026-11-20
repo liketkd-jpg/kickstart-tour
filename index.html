@@ -159,10 +159,442 @@ textarea.in{padding:12px 14px;min-height:84px;resize:vertical;line-height:1.6}
 
 <script src="vendor/supabase.js"></script>
 <script src="vendor/qrcode.js"></script>
+<script src="phrases.js"></script>
 <script src="config.js"></script>
 <script>
 (() => {
 'use strict';
+const EN={'일':"Sun",
+'월':"Mon",
+'화':"Tue",
+'수':"Wed",
+'목':"Thu",
+'금':"Fri",
+'토':"Sat",
+'월 ':" ",
+'일 (':" (",
+'방금':"just now",
+'분 전':" min ago",
+'시간 전':" h ago",
+'초대 번호가 맞지 않습니다. 다시 확인해 주세요':"That invite code doesn't match. Please check it again.",
+'이름을 넣어 주세요':"Please enter a name.",
+'원정에서 빠졌습니다. 다시 참가해 주세요':"You've been removed from this tour. Please join again.",
+'이메일 또는 비밀번호가 맞지 않습니다':"Wrong email or password.",
+'이미 가입된 이메일입니다. 로그인해 주세요':"This email is already registered. Please log in.",
+'비밀번호는 6자 이상으로 넣어 주세요':"Password must be at least 6 characters.",
+'인터넷 연결을 확인해 주세요':"Please check your internet connection.",
+'잠시 문제가 생겼습니다. 다시 시도해 주세요':"Something went wrong. Please try again.",
+'닫기':"Close",
+'한 번 더 누르면 ':"Tap once more to ",
+'연결 설정이 아직 안 됐습니다':"Connection isn't set up yet",
+'config.js 파일에 Supabase 주소와 anon 키를 넣어 주세요.':"Put the Supabase URL and anon key in config.js.",
+'시범단 해외 원정,':"Your team's tour abroad,",
+'한 손에 다 담았습니다':"all in one hand.",
+'모임 공지와 확인':"Meetup notices & read receipts",
+'누가 아직 안 봤는지 바로 보입니다':"See instantly who hasn't read it yet",
+'인원 점검':"Headcount",
+'「왔어요」 한 번으로 버스 탑승 확인':"Confirm bus boarding with one tap on “I'm here”",
+'오디오 가이드':"Audio guide",
+'방문지 해설을 이어폰으로 함께 듣기':"Listen to site commentary together on earphones",
+'구글 지도 길 찾기':"Google Maps directions",
+'모일 곳까지 휴대폰이 길을 안내합니다':"Your phone guides you to the meeting point",
+'단원으로 참가하기':"Join as a team member",
+'지도자 로그인':"Leader login",
+'단원은 지도자에게 받은 초대 번호(6자리)만 있으면 됩니다.':"Team members only need the 6-character invite code from their leader.",
+'처음으로':"Home",
+'6자 이상':"6+ characters",
+'이메일과 비밀번호를 넣어 주세요':"Please enter your email and password.",
+'가입 메일을 확인한 뒤 로그인해 주세요':"Please confirm the sign-up email, then log in.",
+'처음이면 이메일과 비밀번호를 정하고 「처음이면 가입」을 누르세요.':"First time? Choose an email and password and tap “Sign up”.",
+'이메일':"Email",
+'비밀번호':"Password",
+'로그인':"Log in",
+'처음이면 가입':"Sign up",
+'예: K7M2QX':"e.g. K7M2QX",
+'홍길동':"Jane Kim",
+'참가하기':"Join",
+'초대 번호를 넣어 주세요':"Please enter the invite code.",
+'참가하는 중…':"Joining…",
+'참가했습니다':"You've joined!",
+'원정 참가하기':"Join a tour",
+'지도자에게 받은 초대 번호와 내 이름을 넣어 주세요. 한 번 참가하면 다음부터는 바로 열립니다.':"Enter the invite code from your leader and your name. After joining once, the app opens directly next time.",
+'초대 번호':"Invite code",
+'이름':"Name",
+'소속':"Group",
+'로그아웃':"Log out",
+'원정 목록을 불러오지 못했습니다':"Couldn't load your tours",
+'2027 유럽 순회시범':"2027 Europe Demonstration Tour",
+'새 원정 만들기':"Create a new tour",
+'원정 이름을 넣어 주세요':"Please enter a tour name.",
+'돌아오는 날이 출발일보다 빠릅니다':"The return date is before the departure date.",
+'원정을 만들었습니다':"Tour created.",
+'내 원정':"My tours",
+'날짜 미정':"Dates TBD",
+'초대 번호 ':"Invite code ",
+'열기':"Open",
+'아직 원정이 없습니다':"No tours yet",
+'아래에서 첫 원정을 만들어 주세요.':"Create your first tour below.",
+'원정 이름':"Tour name",
+'출발일 (1일째)':"Departure (Day 1)",
+'돌아오는 날':"Return date",
+'인터넷이 끊겨 마지막으로 받은 내용을 보여 줍니다. 연결되면 저절로 새로 고칩니다.':"You're offline, so this shows the last data received. It will refresh automatically when you're back online.",
+'새 공지가 왔습니다':"New notice received",
+'지금 해설: ':"Now playing: ",
+'긴급':"SOS",
+'원정 목록':"Tours",
+'나가기':"Leave",
+'나갑니다':"leave",
+'공지':"Notices",
+'일정':"Schedule",
+'가이드':"Guide",
+'점검':"Check",
+'내 정보':"Me",
+'화면':"Screens",
+'LEADER · 초대 번호 ':"LEADER · Invite code ",
+'일째':"",
+'예: 카를교 동쪽 입구 탑 앞':"e.g. In front of the tower at the east end of Charles Bridge",
+'예: 도복 가방 챙겨서 모이세요. 리허설 장소로 함께 걸어갑니다.':"e.g. Bring your uniform bag. We'll walk to the rehearsal together.",
+'단원에게 공지 올리기':"Post notice to team",
+'모일 장소를 넣어 주세요':"Please enter the meeting place.",
+'구글 지도 주소는 https:// 로 시작해야 합니다':"A Google Maps link must start with https://",
+'모이는 시간을 넣어 주세요':"Please enter the meeting time.",
+'공지를 올렸습니다':"Notice posted.",
+'모임 공지 보내기':"Send a meetup notice",
+'모일 장소 이름':"Meeting place",
+'구글 지도 주소 (있으면 붙여 넣기)':"Google Maps link (optional)",
+'날짜':"Date",
+'모이는 시간':"Meeting time",
+'전할 말':"Message",
+'단원 앱이 열려 있으면 바로 뜨고, 닫혀 있으면 다음에 열 때 맨 위에 보입니다.':"Shows up instantly if a member has the app open, otherwise at the top next time they open it.",
+'아직 공지가 없습니다':"No notices yet",
+'위에서 모일 장소와 시간을 넣고 공지를 올려 주세요.':"Enter a meeting place and time above and post a notice.",
+'지도자가 공지를 올리면 여기에 뜹니다.':"Notices from your leader will appear here.",
+' 모임 · ':" meetup · posted ",
+'에 올림':"",
+'최신':"Latest",
+'구글 지도로 길 찾기':"Directions in Google Maps",
+'확인함 · ':"Seen · ",
+'확인했어요':"Got it",
+'확인했다고 지도자께 알렸습니다':"Your leader has been notified.",
+'확인 ':"Seen ",
+'아직 안 봄 ':"Not seen ",
+'명':"",
+'모두 확인':"All seen",
+'가입한 단원 없음':"No members yet",
+'아직 안 본 단원':"Members who haven't seen it",
+'확인한 단원':"Members who have seen it",
+'공지 지우기':"Delete notice",
+'지웁니다':"delete",
+'공지를 지웠습니다':"Notice deleted.",
+'날짜 고르기':"Pick a date",
+'일째 · ':" · ",
+'오늘':"Today",
+'체크 ':"Done ",
+'도시를 넣으면 여기에 보입니다':"Cities will appear here once added",
+'일정 추가':"Add item",
+'활동 보고서 만들기':"Make activity report",
+'이날 일정이 아직 없습니다':"Nothing scheduled for this day yet",
+'「일정 추가」로 넣어 주세요.':"Add items with “Add item”.",
+'지도자가 일정을 넣으면 여기에 보입니다.':"Items from your leader will appear here.",
+' 다녀옴':" visited",
+'연락처 ':"Contact ",
+'길 찾기':"Directions",
+'해설 듣기':"Listen to guide",
+'순서표':"Run sheet",
+'일정 종류':"Item type",
+'예: 프라하성 관광':"e.g. Prague Castle tour",
+'예: Prague Castle':"e.g. Prague Castle",
+'예: 프라하':"e.g. Prague",
+'공연·숙소 담당자':"Venue or hotel contact",
+'예: 리허설 16:00, 무대 8m × 6m':"e.g. Rehearsal 16:00, stage 8 m × 6 m",
+'일정 저장':"Save item",
+'날짜를 넣어 주세요':"Please enter a date.",
+'일정 이름을 넣어 주세요':"Please enter an item name.",
+'일정을 저장했습니다':"Item saved.",
+'이 일정 삭제':"Delete this item",
+'삭제됩니다':"delete",
+'일정을 삭제했습니다':"Item deleted.",
+'일정 고치기':"Edit item",
+'시간':"Time",
+'종류':"Type",
+'일정 이름':"Item name",
+'장소 (구글 지도에서 찾을 이름이나 주소)':"Place (name or address to find in Google Maps)",
+'도시':"City",
+'현지 담당자 연락처':"Local contact",
+'메모':"Notes",
+'이 휴대폰은 읽어 주기를 지원하지 않습니다':"This phone can't read text aloud.",
+'해설 글이 비어 있습니다':"The guide text is empty.",
+'예: 프라하성':"e.g. Prague Castle",
+'연결 안 함':"Not linked",
+'해설 글을 쓰거나, 아래 단추로 위키백과 설명을 가져오세요.':"Write the guide text, or fetch a Wikipedia description with the button below.",
+'출처: 위키백과':"Source: Wikipedia",
+'자 · 약 ':" chars · about ",
+'분':" min",
+'위키백과에서 가져오기':"Fetch from Wikipedia",
+'장소 이름을 먼저 넣어 주세요':"Enter the place name first.",
+'찾는 중…':"Searching…",
+'위키백과에서 찾지 못했습니다. 다른 이름(영어·현지어)으로 해 보세요':"Not found on Wikipedia. Try another name (English or local).",
+'여러분, 지금 우리가 와 있는 곳은 ':"Everyone, we are now at ",
+'입니다. ':". ",
+'출처: 위키백과 「':"Source: Wikipedia “",
+'가져왔습니다. 읽기 쉽게 고쳐 주세요':"Fetched. Please edit it so it's easy to listen to.",
+'Claude에게 부탁할 글 복사':"Copy a request for Claude",
+'이 장소':"this place",
+'태권도 시범단 중고등학생 단원들에게 이어폰으로 들려줄 「':"Write an audio guide about “",
+'」 관광 해설을 써 줘. 2~3분 분량(700자 안팎), 쉬운 존댓말, 소리 내어 읽기 좋게 짧은 문장으로. 역사 한두 가지, 꼭 볼 것, 재미있는 이야기 하나, 사진 찍기 좋은 곳을 넣어 줘. 해설 글만 써 줘.':"” for middle and high school taekwondo team members to hear on earphones. About 2–3 minutes (around 350 words), simple and friendly, short sentences that are easy to read aloud. Include one or two bits of history, what not to miss, one fun story, and a good photo spot. Write only the guide text.",
+'복사했습니다. Claude에 붙여 넣고, 받은 해설을 위 칸에 붙여 넣으세요':"Copied. Paste it into Claude, then paste the guide you get back into the box above.",
+'복사가 안 돼서 칸에 넣었습니다. 길게 눌러 복사해 주세요':"Couldn't copy, so it's in the box. Long-press to copy it.",
+'미리 듣기':"Preview",
+'해설 저장':"Save guide",
+'장소 이름을 넣어 주세요':"Please enter the place name.",
+'해설 글을 넣어 주세요':"Please enter the guide text.",
+'해설을 저장했습니다':"Guide saved.",
+'이 해설 삭제':"Delete this guide",
+'해설을 삭제했습니다':"Guide deleted.",
+'해설 고치기':"Edit guide",
+'해설 만들기':"Create guide",
+'장소 이름':"Place name",
+'연결할 일정':"Linked schedule item",
+'해설 글':"Guide text",
+'읽는 빠르기':"Reading speed",
+'천천히':"Slow",
+'보통':"Normal",
+'빠르게':"Fast",
+'가이드 종류':"Guide type",
+'현지어 배우기':"Learn the language",
+'이 휴대폰 브라우저는 읽어 주기를 지원하지 않습니다. 해설 글을 읽어 주세요.':"This browser can't read text aloud. Please read the guide text instead.",
+'지금 해설':"Now playing",
+' 시작':" started",
+'멈추기':"Stop",
+'이어폰 끼고 듣기':"Put on earphones and listen",
+'아직 해설이 없습니다':"No guides yet",
+'「해설 만들기」에서 장소 이름을 넣고 위키백과 설명을 가져오거나, Claude에게 해설을 부탁해 붙여 넣으세요.':"In “Create guide”, enter a place name and fetch the Wikipedia description, or ask Claude to write one and paste it in.",
+'지도자가 해설을 만들면 여기에서 들을 수 있습니다.':"Guides from your leader can be played here.",
+'약 ':"About ",
+'접기':"Collapse",
+'글 전체 보기':"Show full text",
+'듣기':"Listen",
+'단원 휴대폰에 「지금 해설」이 뜹니다':"“Now playing” will pop up on members' phones.",
+'모두에게 지금 재생':"Play for everyone now",
+'고치기':"Edit",
+'오늘의 기록':"Today's log",
+'사진 ':"Photos ",
+'장':"",
+' 활동 사진':" activity photo",
+'사진 지우기':"Delete photo",
+'지우기':"Delete",
+'지움':"delete",
+'사진을 지웠습니다':"Photo deleted.",
+'아직 이날 기록이 없습니다.':"Nothing logged for this day yet.",
+'예: 구시가지 광장 공연, 관객 반응 아주 좋았음. 다음 공연은 매트 추가.':"e.g. Old Town Square show, great audience reaction. Add mats for the next show.",
+'사진 올리기':"Upload photos",
+'올리는 중 ':"Uploading ",
+'사진 한 장을 올리지 못했습니다':"One photo couldn't be uploaded.",
+'장을 올렸습니다':" uploaded",
+'메모 저장':"Save note",
+'메모를 저장했습니다':"Note saved.",
+'사진은 짐작할 수 없는 긴 주소로 저장되어 앱 안에서만 보입니다. 단원 화면에도 이날 기록이 보입니다. 마지막에 「활동 보고서 만들기」로 날짜별 일정·점검·메모·사진을 한 번에 인쇄하거나 PDF로 저장할 수 있습니다.':"Photos are stored at long, unguessable addresses and are only shown inside the app. Members can also see each day's log. At the end, use “Make activity report” to print or save daily schedules, checks, notes and photos as a PDF.",
+'<p>아직 기록이 없습니다.</p>':"<p>No records yet.</p>",
+'새 창이 막혔습니다. 팝업 허용 뒤 다시 눌러 주세요':"The new window was blocked. Allow pop-ups and tap again.",
+'유럽 긴급 신고 (경찰·구급차·소방)':"Europe emergency (police · ambulance · fire)",
+'EU 어디서나 무료':"Free anywhere in the EU",
+'외교부 영사콜센터 (24시간)':"Korean Consular Call Center (24 h)",
+'해외 사건·사고 상담':"Help for incidents abroad",
+'대한민국 대사관':"Embassy of the Republic of Korea",
+'방문 나라 대사관 번호를 넣어 주세요':"Enter the embassy number for the country you're visiting",
+'여행자 보험사':"Travel insurance",
+'증권 번호':"Policy number",
+'번호를 누르면 전화가 걸립니다. 걸리지 않으면 번호를 길게 눌러 복사해 주세요.':"Tap a number to call. If it doesn't dial, long-press the number to copy it.",
+'연락처':"Contact",
+'번호가 아직 없습니다':"No number yet",
+'연락처 고치기':"Edit contacts",
+'긴급 연락처':"Emergency contacts",
+'이름 (예: 주체코 대사관)':"Name (e.g. Korean Embassy in Prague)",
+'빼기':"Remove",
+'저장':"Save",
+'긴급 연락처를 저장했습니다':"Emergency contacts saved.",
+'긴급 연락처 고치기':"Edit emergency contacts",
+'+ 연락처 추가':"+ Add contact",
+'오늘의 안내 · ':"Today · ",
+'예: 오늘 12도·비 예보, 우산 챙기기 · 기상 7시 · 조식 7시 반 · 8시 로비 집합':"e.g. 12°C with rain today, bring an umbrella · wake-up 7:00 · breakfast 7:30 · lobby 8:00",
+'안내 올리기':"Post",
+'오늘의 안내를 올렸습니다':"Today's note posted.",
+'오늘의 한 줄 안내':"Today's one-line note",
+'단원 공지 화면 맨 위에 크게 보입니다.':"Shows large at the top of members' Notices screen.",
+'예: 305':"e.g. 305",
+'예: 2호차 7번':"e.g. Bus 2, seat 7",
+'보호자 이름·전화':"Guardian name & phone",
+'끝 4자리':"Last 4 digits",
+'알레르기, 복용 약, 주의할 점':"Allergies, medication, things to watch",
+'저장했습니다':"Saved.",
+'방 번호':"Room",
+'버스 좌석':"Bus seat",
+'건강·안전 메모 (지도자와 본인만 봄)':"Health & safety note (only leader and member)",
+'보호자 연락처':"Guardian contact",
+'여권 번호 끝 4자리':"Passport no. last 4 digits",
+'준비물 ':"Packing ",
+'챙김 · ':"Packed · ",
+'아직 · ':"Not yet · ",
+'방 배정':"Rooms",
+'방 없음 ':"No room: ",
+'모두 배정':"All assigned",
+'아래 단원 이름을 눌러 방 번호와 버스 좌석을 넣으면 여기에 모입니다.':"Tap a member's name below to add a room and bus seat; they'll be grouped here.",
+'한 줄에 하나씩\n여권\n도복·띠\n시범 소품\n충전기·보조배터리\n상비약':"One item per line\nPassport\nUniform & belt\nShow props\nCharger & power bank\nMedicine",
+'준비물 목록 저장':"Save packing list",
+'준비물 목록을 저장했습니다':"Packing list saved.",
+'준비물 체크리스트':"Packing checklist",
+'다 챙김 ':"All packed ",
+'단원은 「내 정보」 칸에서 하나씩 체크합니다. 누가 덜 챙겼는지는 단원 이름 옆 숫자로 보입니다.':"Members tick items off in the “Me” tab. The number next to each name shows who still has things to pack.",
+'내 방':"My room",
+'버스 ':"Bus ",
+'버스 좌석 미정':"Bus seat TBD",
+'미정':"TBD",
+'함께 쓰는 친구: ':"Roommates: ",
+'혼자 쓰는 방':"Single room",
+'지도자가 방을 정하면 여기에 보입니다':"Your room will show here once your leader assigns it",
+'준비물':"Packing",
+'알레르기, 복용 중인 약, 지도자가 알아야 할 점':"Allergies, medication, anything your leader should know",
+'보호자 이름·전화번호':"Guardian name & phone number",
+'지도자께 전달했습니다':"Sent to your leader.",
+'건강·안전 메모':"Health & safety note",
+'지도자만 볼 수 있습니다. 아플 때 빨리 도와드리기 위해 씁니다.':"Only your leader can see this. It helps us help you quickly if you feel unwell.",
+'알레르기·약·주의할 점':"Allergies · medication · notes",
+'음악 ':"Music ",
+'출연 ':"Cast ",
+'소품 ':"Props ",
+'시간 ':"Time ",
+'위로':"Move up",
+'아래로':"Move down",
+'뺌':"remove",
+'순서표가 아직 없습니다':"No run sheet yet",
+'아래에서 순서를 하나씩 넣어 주세요.':"Add the acts below one by one.",
+'지도자가 순서표를 만들면 여기에 보입니다.':"Your leader's run sheet will show here.",
+'예: 오프닝 품새':"e.g. Opening poomsae",
+'음악 파일 이름':"Music file name",
+'출연 단원':"Performers",
+'격파 송판 20장 등':"e.g. 20 breaking boards",
+'예: 2분 30초':"e.g. 2 min 30 s",
+'순서 추가':"Add act",
+'순서 이름을 넣어 주세요':"Please enter the act name.",
+'순서 이름':"Act name",
+'음악':"Music",
+'출연':"Cast",
+'소품':"Props",
+' 순서표':" run sheet",
+'순서를 바꾸지 못했습니다':"Couldn't change the order.",
+'이 휴대폰에 체코어 목소리가 없어 다른 목소리로 읽을 수 있습니다. 한글 발음을 함께 보세요':"This phone has no Czech voice, so another voice may read it. Check the Korean pronunciation too.",
+'언어':"Language",
+'퀴즈 최고 ':"Best quiz ",
+'퀴즈 아직 안 함':"No quiz yet",
+'외운 문장':"Phrases learned",
+'공부 방식':"Study mode",
+'문장 공부':"Phrases",
+'퀴즈':"Quiz",
+'주제':"Topic",
+'전체':"All",
+'외웠어요':"Learned",
+'외우기':"Mark learned",
+'퀴즈 10문제':"10-question quiz",
+'뜻 보고 고르기는 우리말 뜻을 보고 현지어를, 듣고 고르기는 소리를 듣고 뜻을 고릅니다.':"“Read & pick” shows the meaning and you pick the phrase; “Listen & pick” plays the phrase and you pick the meaning.",
+'뜻 보고 고르기':"Read & pick",
+'듣고 고르기':"Listen & pick",
+'퀴즈 끝':"Quiz done",
+'최고 ':"Best ",
+'완벽합니다! 현지에서 자신 있게 써 보세요':"Perfect! Use them with confidence on the trip.",
+'잘했어요! 틀린 문장만 한 번 더 들어 보세요':"Well done! Listen once more to the ones you missed.",
+'문장 공부에서 듣기를 몇 번 더 해 보세요':"Try listening a few more times in Phrases.",
+'다시 하기':"Try again",
+'맞힌 문제 ':"Correct ",
+'다시 듣기':"Listen again",
+'정답! ':"Correct! ",
+'아쉬워요. 정답: ':"Not quite. Answer: ",
+'다음 문제':"Next question",
+'결과 보기':"See results",
+'길을 잃었어요 · 내 위치 보내기':"I'm lost · Send my location",
+'이 휴대폰에서는 위치를 보낼 수 없습니다':"This phone can't send its location.",
+'위치 찾는 중…':"Finding location…",
+'지도자께 내 위치를 보냈습니다. 그 자리에서 기다려 주세요':"Your location was sent to your leader. Please wait where you are.",
+'위치 사용을 허용해 주세요 (휴대폰 설정)':"Please allow location access (phone settings).",
+'위치를 찾지 못했습니다. 다시 눌러 주세요':"Couldn't find your location. Please tap again.",
+'도착 확인됨':"Arrival confirmed",
+'왔어요':"I'm here",
+'도착을 알렸습니다':"Arrival sent.",
+'지금 인원 점검 중':"Headcount in progress",
+'지금 진행 중인 인원 점검이 없습니다':"No headcount right now",
+'지도자가 점검을 시작하면 「왔어요」 버튼이 나옵니다.':"When your leader starts a check, an “I'm here” button appears.",
+'아직 ':"Missing ",
+'모두 왔습니다':"Everyone's here",
+'아직 안 온 단원':"Not here yet",
+'보낸 위치 ':"Sent location ",
+'보낸 위치 없음':"No location sent",
+'휴대폰 없이 추가한 단원':"Added without a phone",
+'위치 보기':"View location",
+'이름을 눌러 확인하기':"Tap names to check in",
+'단원이 「왔어요」를 누르면 저절로 바뀝니다. 직접 누르면 확인·취소됩니다.':"Changes automatically when a member taps “I'm here”. Tap to check or uncheck by hand.",
+'점검을 마쳤습니다':"Check finished.",
+'점검 마치기':"Finish check",
+'아직 단원이 없습니다':"No members yet",
+'「단원」 칸에서 초대 번호를 보내거나 직접 단원을 추가해 주세요.':"Send the invite code from the “Members” tab or add members directly.",
+'예: 버스 탑승':"e.g. Bus boarding",
+'점검 이름을 넣어 주세요':"Please enter a name for the check.",
+' 점검을 시작했습니다':" check started",
+'인원 점검 시작':"Start a headcount",
+'다른 이름으로':"Custom name",
+'점검 시작':"Start check",
+'시작하면 단원 휴대폰에 「왔어요」 버튼이 뜹니다.':"Once started, an “I'm here” button appears on members' phones.",
+'지난 점검':"Past checks",
+'참가 QR 코드':"Join QR code",
+'참가 링크 복사':"Copy join link",
+'[원정 참가] ':"[Join the tour] ",
+'\n초대 번호: ':"\nInvite code: ",
+'복사했습니다. 단톡방에 붙여 넣어 주세요':"Copied. Paste it into your group chat.",
+'복사가 안 됩니다. 아래 주소를 길게 눌러 복사해 주세요':"Can't copy. Long-press the address below to copy it.",
+'[원정 참가] 초대 번호: ':"[Join the tour] Invite code: ",
+'공유하기':"Share",
+'단원 초대':"Invite members",
+'단원은 이 링크를 열거나 QR을 찍고, 이름만 넣으면 참가합니다. 로그인은 필요 없습니다.':"Members open this link or scan the QR and just enter their name. No login needed.",
+'휴대폰 없는 단원 이름':"Name of member without a phone",
+'직접 추가':"Add",
+'단원을 추가했습니다':"Member added.",
+'단원 ':"Members ",
+'건강 메모':"Health note",
+'호':" (room)",
+'눌러서 방·좌석·건강 메모 넣기':"Tap to add room, seat and health note",
+' 참가':" joined",
+' · 위치 ':" · location ",
+'휴대폰 없이 추가':"Added without a phone",
+'위치':"Location",
+'뺍니다':"remove",
+'아직 참가한 단원이 없습니다.':"No members have joined yet.",
+'원정 정보 저장':"Save tour info",
+'원정 정보':"Tour info",
+'출발일':"Departure",
+'홈 화면에 설치하면 앱처럼 바로 열립니다.':"Install it on your home screen to open it like an app.",
+'설치':"Install",
+'아래 공유 버튼(네모에 화살표) → 「홈 화면에 추가」를 누르면 앱처럼 설치됩니다.':"Tap Share (square with arrow) → “Add to Home Screen” to install it like an app.",
+'열지 못했습니다':"Couldn't open",
+'관광':"Sightseeing",
+'공연':"Show",
+'리허설':"Rehearsal",
+'식사':"Meal",
+'이동':"Travel",
+'숙소':"Hotel",
+'기타':"Other",
+'대학부':"University",
+'고등부':"High school",
+'중등부':"Middle school",
+'초등부':"Elementary",
+'지도자':"Leader",
+'단원':"Member",
+'버스 탑승':"Bus boarding",
+'호텔 출발':"Hotel departure",
+'공연장 집합':"Meet at venue",
+'식당 집합':"Meet at restaurant",
+'자유 시간 뒤 집합':"Meet after free time"};
+let LANG=(()=>{ try{ const s=localStorage.getItem('lang'); if(s==='ko'||s==='en') return s; }catch(e){} return /^ko/i.test(navigator.language||'ko')?'ko':'en'; })();
+const T=k=>(LANG==='en'&&Object.prototype.hasOwnProperty.call(EN,k))?EN[k]:k;
+const dn=n=>LANG==='en'?'Day '+n:n+'일째';
+document.documentElement.lang=LANG;
 /* ---------- 도우미 ---------- */
 const $ = id => document.getElementById(id);
 function h(tag, props, ...kids){
@@ -182,23 +614,23 @@ const today=()=>ymd(new Date());
 const isDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'');
 const addDays=(s,n)=>{ const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); };
 const WD=['일','월','화','수','목','금','토'];
-const dayLabel=s=>{ const d=new Date(s+'T00:00:00'); return isNaN(d)?(s||''):(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')'; };
+const dayLabel=s=>{ const d=new Date(s+'T00:00:00'); if(isNaN(d)) return s||''; return LANG==='en'? d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : (d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')'; };
 const hm=ts=>{ if(!ts) return ''; const d=new Date(ts); return pad(d.getHours())+':'+pad(d.getMinutes()); };
-const ago=ts=>{ if(!ts) return ''; const m=Math.round((Date.now()-new Date(ts))/60000); return m<1?'방금':m<60?m+'분 전':Math.round(m/60)+'시간 전'; };
+const ago=ts=>{ if(!ts) return ''; const m=Math.round((Date.now()-new Date(ts))/60000); return m<1?T('방금'):m<60?m+T('분 전'):Math.round(m/60)+T('시간 전'); };
 const isUrl=s=>/^https:\/\/\S+$/i.test(String(s||'').trim());
 const dirUrl=p=>isUrl(p)?String(p).trim():'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(p);
 const posUrl=(lat,lng)=>'https://www.google.com/maps/search/?api=1&query='+lat+','+lng;
 const store={ get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v); }catch(e){} } };
 let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,2800); }
 function errText(e){ const m=String(e&&(e.message||e.error_description)||e||'');
-  if(/wrong_code/.test(m)) return '초대 번호가 맞지 않습니다. 다시 확인해 주세요';
-  if(/name_required/.test(m)) return '이름을 넣어 주세요';
-  if(/bad_token/.test(m)) return '원정에서 빠졌습니다. 다시 참가해 주세요';
-  if(/Invalid login credentials/i.test(m)) return '이메일 또는 비밀번호가 맞지 않습니다';
-  if(/already registered/i.test(m)) return '이미 가입된 이메일입니다. 로그인해 주세요';
-  if(/Password should be/i.test(m)) return '비밀번호는 6자 이상으로 넣어 주세요';
-  if(/Failed to fetch|NetworkError|network/i.test(m)) return '인터넷 연결을 확인해 주세요';
-  return '잠시 문제가 생겼습니다. 다시 시도해 주세요'; }
+  if(/wrong_code/.test(m)) return T('초대 번호가 맞지 않습니다. 다시 확인해 주세요');
+  if(/name_required/.test(m)) return T('이름을 넣어 주세요');
+  if(/bad_token/.test(m)) return T('원정에서 빠졌습니다. 다시 참가해 주세요');
+  if(/Invalid login credentials/i.test(m)) return T('이메일 또는 비밀번호가 맞지 않습니다');
+  if(/already registered/i.test(m)) return T('이미 가입된 이메일입니다. 로그인해 주세요');
+  if(/Password should be/i.test(m)) return T('비밀번호는 6자 이상으로 넣어 주세요');
+  if(/Failed to fetch|NetworkError|network/i.test(m)) return T('인터넷 연결을 확인해 주세요');
+  return T('잠시 문제가 생겼습니다. 다시 시도해 주세요'); }
 
 const TYPES=['관광','공연','리허설','식사','이동','숙소','기타'];
 const GROUPS=['대학부','고등부','중등부','초등부','지도자','기타'];
@@ -212,7 +644,9 @@ const cfg=window.TOUR_CONFIG||{};
 const configured = cfg.SUPABASE_URL && !/YOUR-PROJECT/.test(cfg.SUPABASE_URL) && cfg.SUPABASE_ANON_KEY && !/YOUR-ANON-KEY/.test(cfg.SUPABASE_ANON_KEY);
 
 function main(...nodes){ const m=$('main'); m.replaceChildren(...nodes); }
-function topRight(node){ $('topRight').replaceChildren(node||''); }
+function langBtn(){ return h('button',{class:'linkbtn',type:'button','aria-label':LANG==='en'?'한국어로 보기':'Switch to English',style:'border:1px solid var(--line);border-radius:16px;min-height:34px;padding:0 10px;font-family:var(--f-num)',
+  onclick:()=>{ store.set('lang',LANG==='en'?'ko':'en'); location.reload(); }},LANG==='en'?'한국어':'EN'); }
+function topRight(node){ $('topRight').replaceChildren(h('div',{style:'display:flex;align-items:center;gap:6px'},node||'',langBtn())); }
 
 /* ---------- 아이콘 ---------- */
 const ICONS={
@@ -230,7 +664,7 @@ function icon(name){ const sp=document.createElement('span'); sp.className='ico'
 /* ---------- 시트(아래에서 올라오는 창) ---------- */
 function openSheet(title, body){
   const sh=$('sheet'); sh.replaceChildren(
-    h('div',{class:'sheet-top'},h('h2',{style:'font-size:18px;font-weight:900',text:title}),h('button',{class:'x',type:'button','aria-label':'닫기',onclick:closeSheet},'×')),
+    h('div',{class:'sheet-top'},h('h2',{style:'font-size:18px;font-weight:900',text:title}),h('button',{class:'x',type:'button','aria-label':T('닫기'),onclick:closeSheet},'×')),
     ...[].concat(body));
   $('sheetWrap').hidden=false; document.body.style.overflow='hidden';
   setTimeout(()=>sh.querySelector('.x').focus(),30);
@@ -238,12 +672,12 @@ function openSheet(title, body){
 function closeSheet(){ $('sheetWrap').hidden=true; document.body.style.overflow=''; }
 $('sheetWrap').addEventListener('click',e=>{ if(e.target===$('sheetWrap')) closeSheet(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('sheetWrap').hidden) closeSheet(); });
-function armButton(btn,label,fn){ btn.onclick=async()=>{ if(!btn.dataset.arm){ btn.dataset.arm='1'; btn.textContent='한 번 더 누르면 '+label; return; } btn.disabled=true; try{ await fn(); }finally{ btn.disabled=false; } }; return btn; }
+function armButton(btn,label,fn){ btn.onclick=async()=>{ if(!btn.dataset.arm){ btn.dataset.arm='1'; btn.textContent=T('한 번 더 누르면 ')+label; return; } btn.disabled=true; try{ await fn(); }finally{ btn.disabled=false; } }; return btn; }
 
 /* ---------- 첫 화면들 ---------- */
 function screenSetup(){
   topRight(null);
-  main(h('div',{class:'empty'},h('strong',{text:'연결 설정이 아직 안 됐습니다'}),h('span',{text:'config.js 파일에 Supabase 주소와 anon 키를 넣어 주세요.'})));
+  main(h('div',{class:'empty'},h('strong',{text:T('연결 설정이 아직 안 됐습니다')}),h('span',{text:T('config.js 파일에 Supabase 주소와 anon 키를 넣어 주세요.')})));
 }
 function screenLanding(){
   topRight(null);
@@ -252,97 +686,97 @@ function screenLanding(){
     h('section',{class:'landing-hero'},
       h('span',{class:'eyebrow',text:'KICKSTART UP · TOUR'}),
       h('div',{class:'bar'}),
-      h('h1',{},'시범단 해외 원정,',h('br'),'한 손에 다 담았습니다'),
+      h('h1',{},T('시범단 해외 원정,'),h('br'),T('한 손에 다 담았습니다')),
       h('span',{class:'en',text:'Travel together. Perform together.'})),
     h('div',{class:'feats'},
-      feat('notices','모임 공지와 확인','누가 아직 안 봤는지 바로 보입니다'),
-      feat('check','인원 점검','「왔어요」 한 번으로 버스 탑승 확인'),
-      feat('guide','오디오 가이드','방문지 해설을 이어폰으로 함께 듣기'),
-      feat('pin','구글 지도 길 찾기','모일 곳까지 휴대폰이 길을 안내합니다')),
+      feat('notices',T('모임 공지와 확인'),T('누가 아직 안 봤는지 바로 보입니다')),
+      feat('check',T('인원 점검'),T('「왔어요」 한 번으로 버스 탑승 확인')),
+      feat('guide',T('오디오 가이드'),T('방문지 해설을 이어폰으로 함께 듣기')),
+      feat('pin',T('구글 지도 길 찾기'),T('모일 곳까지 휴대폰이 길을 안내합니다'))),
     h('div',{class:'stack'},
-      h('button',{class:'btn btn-red btn-big',type:'button',onclick:()=>screenJoin('')},'단원으로 참가하기'),
-      h('button',{class:'btn btn-navy',type:'button',onclick:screenLogin},'지도자 로그인'),
-      h('span',{class:'muted',style:'text-align:center',text:'단원은 지도자에게 받은 초대 번호(6자리)만 있으면 됩니다.'})));
+      h('button',{class:'btn btn-red btn-big',type:'button',onclick:()=>screenJoin('')},T('단원으로 참가하기')),
+      h('button',{class:'btn btn-navy',type:'button',onclick:screenLogin},T('지도자 로그인')),
+      h('span',{class:'muted',style:'text-align:center',text:T('단원은 지도자에게 받은 초대 번호(6자리)만 있으면 됩니다.')})));
 }
 function screenLogin(){
-  topRight(h('button',{class:'linkbtn',type:'button',onclick:route},'처음으로'));
+  topRight(h('button',{class:'linkbtn',type:'button',onclick:route},T('처음으로')));
   const email=h('input',{class:'in',type:'email',id:'lgEmail',autocomplete:'email',placeholder:'coach@example.com'});
-  const pw=h('input',{class:'in',type:'password',id:'lgPw',autocomplete:'current-password',placeholder:'6자 이상'});
+  const pw=h('input',{class:'in',type:'password',id:'lgPw',autocomplete:'current-password',placeholder:T('6자 이상')});
   const go=async(mode)=>{
     const e=email.value.trim(), p=pw.value;
-    if(!e||!p){ toast('이메일과 비밀번호를 넣어 주세요'); return; }
+    if(!e||!p){ toast(T('이메일과 비밀번호를 넣어 주세요')); return; }
     try{
       const r = mode==='up' ? await S.sb.auth.signUp({email:e,password:p}) : await S.sb.auth.signInWithPassword({email:e,password:p});
       if(r.error) throw r.error;
-      if(mode==='up' && !r.data.session){ toast('가입 메일을 확인한 뒤 로그인해 주세요'); return; }
+      if(mode==='up' && !r.data.session){ toast(T('가입 메일을 확인한 뒤 로그인해 주세요')); return; }
       await route();
     }catch(err){ toast(errText(err)); }
   };
   main(h('section',{class:'panel'},
-    h('h1',{text:'지도자 로그인'}),
-    h('span',{class:'muted',text:'처음이면 이메일과 비밀번호를 정하고 「처음이면 가입」을 누르세요.'}),
-    h('label',{class:'f'},'이메일',email), h('label',{class:'f'},'비밀번호',pw),
+    h('h1',{text:T('지도자 로그인')}),
+    h('span',{class:'muted',text:T('처음이면 이메일과 비밀번호를 정하고 「처음이면 가입」을 누르세요.')}),
+    h('label',{class:'f'},T('이메일'),email), h('label',{class:'f'},T('비밀번호'),pw),
     h('div',{class:'actions'},
-      h('button',{class:'btn btn-navy',type:'button',onclick:()=>go('in')},'로그인'),
-      h('button',{class:'btn btn-ghost',type:'button',onclick:()=>go('up')},'처음이면 가입'))));
+      h('button',{class:'btn btn-navy',type:'button',onclick:()=>go('in')},T('로그인')),
+      h('button',{class:'btn btn-ghost',type:'button',onclick:()=>go('up')},T('처음이면 가입')))));
 }
 function screenJoin(code){
-  topRight(h('button',{class:'linkbtn',type:'button',onclick:()=>{ history.replaceState(null,'',location.pathname); route(); }},'처음으로'));
-  const c=h('input',{class:'in num',id:'jCode',value:code||'',placeholder:'예: K7M2QX',autocapitalize:'characters',autocomplete:'off',style:'font-size:22px;letter-spacing:.12em;text-transform:uppercase'});
-  const n=h('input',{class:'in',id:'jName',autocomplete:'name',placeholder:'홍길동'});
-  const g=h('select',{class:'in',id:'jGroup'},GROUPS.map(x=>h('option',{value:x},x)));
-  const btn=h('button',{class:'btn btn-red btn-big',type:'button'},'참가하기');
+  topRight(h('button',{class:'linkbtn',type:'button',onclick:()=>{ history.replaceState(null,'',location.pathname); route(); }},T('처음으로')));
+  const c=h('input',{class:'in num',id:'jCode',value:code||'',placeholder:T('예: K7M2QX'),autocapitalize:'characters',autocomplete:'off',style:'font-size:22px;letter-spacing:.12em;text-transform:uppercase'});
+  const n=h('input',{class:'in',id:'jName',autocomplete:'name',placeholder:T('홍길동')});
+  const g=h('select',{class:'in',id:'jGroup'},GROUPS.map(x=>h('option',{value:x},T(x))));
+  const btn=h('button',{class:'btn btn-red btn-big',type:'button'},T('참가하기'));
   btn.onclick=async()=>{
     const code=c.value.trim().toUpperCase(), name=n.value.trim();
-    if(code.length<4){ toast('초대 번호를 넣어 주세요'); c.focus(); return; }
-    if(!name){ toast('이름을 넣어 주세요'); n.focus(); return; }
-    btn.disabled=true; btn.textContent='참가하는 중…';
+    if(code.length<4){ toast(T('초대 번호를 넣어 주세요')); c.focus(); return; }
+    if(!name){ toast(T('이름을 넣어 주세요')); n.focus(); return; }
+    btn.disabled=true; btn.textContent=T('참가하는 중…');
     try{
       const r=await S.sb.rpc('tour_join',{p_code:code,p_name:name,p_grp:g.value}); if(r.error) throw r.error;
       store.set('tourToken',r.data.token); history.replaceState(null,'',location.pathname);
-      toast('참가했습니다'); await route();
+      toast(T('참가했습니다')); await route();
     }catch(err){ toast(errText(err)); }
-    finally{ btn.disabled=false; btn.textContent='참가하기'; }
+    finally{ btn.disabled=false; btn.textContent=T('참가하기'); }
   };
   main(h('section',{class:'panel'},
-    h('h1',{text:'원정 참가하기'}),
-    h('span',{class:'muted',text:'지도자에게 받은 초대 번호와 내 이름을 넣어 주세요. 한 번 참가하면 다음부터는 바로 열립니다.'}),
-    h('label',{class:'f'},'초대 번호',c), h('div',{class:'grid2'},h('label',{class:'f'},'이름',n),h('label',{class:'f'},'소속',g)), btn));
+    h('h1',{text:T('원정 참가하기')}),
+    h('span',{class:'muted',text:T('지도자에게 받은 초대 번호와 내 이름을 넣어 주세요. 한 번 참가하면 다음부터는 바로 열립니다.')}),
+    h('label',{class:'f'},T('초대 번호'),c), h('div',{class:'grid2'},h('label',{class:'f'},T('이름'),n),h('label',{class:'f'},T('소속'),g)), btn));
   if(code) setTimeout(()=>n.focus(),50);
 }
 
 /* ---------- 지도자: 원정 목록 ---------- */
 function genCode(){ const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; const b=new Uint32Array(6); crypto.getRandomValues(b); return [...b].map(x=>A[x%A.length]).join(''); }
 async function screenTours(){
-  topRight(h('button',{class:'linkbtn',type:'button',onclick:logout},'로그아웃'));
+  topRight(h('button',{class:'linkbtn',type:'button',onclick:logout},T('로그아웃')));
   const r=await S.sb.from('tour_tours').select('*').eq('owner_id',S.uid).order('created_at',{ascending:false});
-  if(r.error){ main(h('div',{class:'empty'},h('strong',{text:'원정 목록을 불러오지 못했습니다'}),h('span',{text:errText(r.error)}))); return; }
+  if(r.error){ main(h('div',{class:'empty'},h('strong',{text:T('원정 목록을 불러오지 못했습니다')}),h('span',{text:errText(r.error)}))); return; }
   S.tours=r.data||[];
-  const name=h('input',{class:'in',id:'tName',placeholder:'2027 유럽 순회시범'});
+  const name=h('input',{class:'in',id:'tName',placeholder:T('2027 유럽 순회시범')});
   const st=h('input',{class:'in',type:'date',id:'tStart'}), en=h('input',{class:'in',type:'date',id:'tEnd'});
-  const mk=h('button',{class:'btn btn-red',type:'button'},'새 원정 만들기');
+  const mk=h('button',{class:'btn btn-red',type:'button'},T('새 원정 만들기'));
   mk.onclick=async()=>{
-    if(!name.value.trim()){ toast('원정 이름을 넣어 주세요'); name.focus(); return; }
-    if(st.value&&en.value&&en.value<st.value){ toast('돌아오는 날이 출발일보다 빠릅니다'); return; }
+    if(!name.value.trim()){ toast(T('원정 이름을 넣어 주세요')); name.focus(); return; }
+    if(st.value&&en.value&&en.value<st.value){ toast(T('돌아오는 날이 출발일보다 빠릅니다')); return; }
     mk.disabled=true;
     try{
       let res; for(let i=0;i<5;i++){ res=await S.sb.from('tour_tours').insert({name:name.value.trim(),code:genCode(),start_date:st.value||null,end_date:en.value||null,owner_id:S.uid}).select().single(); if(!res.error||res.error.code!=='23505') break; }
       if(res.error) throw res.error;
-      toast('원정을 만들었습니다'); openTour(res.data,'members');
+      toast(T('원정을 만들었습니다')); openTour(res.data,'members');
     }catch(err){ toast(errText(err)); } finally{ mk.disabled=false; }
   };
   main(
-    h('h1',{text:'내 원정'}),
+    h('h1',{text:T('내 원정')}),
     S.tours.length ? h('div',{class:'list'}, S.tours.map(t=>h('div',{class:'row-item'},
       h('button',{class:'row-body',type:'button',onclick:()=>openTour(t)},
         h('span',{class:'ttl',text:t.name}),
-        h('span',{class:'muted',text:[t.start_date&&dayLabel(t.start_date),t.end_date&&dayLabel(t.end_date)].filter(Boolean).join(' ~ ')||'날짜 미정'}),
-        h('span',{class:'muted',text:'초대 번호 '+t.code})),
-      h('span',{class:'maplink','aria-hidden':'true'},'열기'))))
-      : h('div',{class:'empty'},h('strong',{text:'아직 원정이 없습니다'}),h('span',{text:'아래에서 첫 원정을 만들어 주세요.'})),
-    h('section',{class:'panel'},h('h2',{text:'새 원정 만들기'}),
-      h('label',{class:'f'},'원정 이름',name),
-      h('div',{class:'grid2'},h('label',{class:'f'},'출발일 (1일째)',st),h('label',{class:'f'},'돌아오는 날',en)), mk));
+        h('span',{class:'muted',text:[t.start_date&&dayLabel(t.start_date),t.end_date&&dayLabel(t.end_date)].filter(Boolean).join(' ~ ')||T('날짜 미정')}),
+        h('span',{class:'muted',text:T('초대 번호 ')+t.code})),
+      h('span',{class:'maplink','aria-hidden':'true'},T('열기')))))
+      : h('div',{class:'empty'},h('strong',{text:T('아직 원정이 없습니다')}),h('span',{text:T('아래에서 첫 원정을 만들어 주세요.')})),
+    h('section',{class:'panel'},h('h2',{text:T('새 원정 만들기')}),
+      h('label',{class:'f'},T('원정 이름'),name),
+      h('div',{class:'grid2'},h('label',{class:'f'},T('출발일 (1일째)'),st),h('label',{class:'f'},T('돌아오는 날'),en)), mk));
 }
 
 /* ---------- 원정 열기·데이터 ---------- */
@@ -376,11 +810,11 @@ async function loadAll(){
     S.offline=false; $('netBar').hidden=true;
     store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks,guides:S.guides,journal:S.journal,cues:S.cues,roommates:S.roommates}));
   }catch(err){
-    if(/bad_token/.test(String(err&&err.message))){ store.set('tourToken',null); S.token=null; S.anon=false; S.tour=null; toast('원정에서 빠졌습니다. 다시 참가해 주세요'); screenJoin(''); throw err; }
+    if(/bad_token/.test(String(err&&err.message))){ store.set('tourToken',null); S.token=null; S.anon=false; S.tour=null; toast(T('원정에서 빠졌습니다. 다시 참가해 주세요')); screenJoin(''); throw err; }
     const c=store.get(ck);
     if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks,guides:d.guides||[],journal:d.journal||[],cues:d.cues||[],roommates:d.roommates||[]}); if(S.anon) S.me=d.me; }catch(e){} }
     else if(!S.tour) throw err;
-    S.offline=true; const nb=$('netBar'); nb.replaceChildren(h('span',{text:'인터넷이 끊겨 마지막으로 받은 내용을 보여 줍니다. 연결되면 저절로 새로 고칩니다.'})); nb.hidden=false;
+    S.offline=true; const nb=$('netBar'); nb.replaceChildren(h('span',{text:T('인터넷이 끊겨 마지막으로 받은 내용을 보여 줍니다. 연결되면 저절로 새로 고칩니다.')})); nb.hidden=false;
   }
 }
 let reloadT={};
@@ -399,12 +833,12 @@ function subscribe(){
 function notifyNew(){
   const ids=new Set(S.notices.map(n=>n.id));
   if(S.knownNotices && [...ids].some(x=>!S.knownNotices.has(x))){
-    toast('새 공지가 왔습니다');
+    toast(T('새 공지가 왔습니다'));
     if(S.anon){ S.tab='notices'; try{ navigator.vibrate&&navigator.vibrate([200,100,200]); }catch(e){} }
   }
   S.knownNotices=ids;
   const lg=liveGuide();
-  if(S.knownLive!==null && lg && lg.id+lg.live_at!==S.knownLive && S.anon){ toast('지금 해설: '+lg.title); S.tab='guide'; try{ navigator.vibrate&&navigator.vibrate(200); }catch(e){} }
+  if(S.knownLive!==null && lg && lg.id+lg.live_at!==S.knownLive && S.anon){ toast(T('지금 해설: ')+lg.title); S.tab='guide'; try{ navigator.vibrate&&navigator.vibrate(200); }catch(e){} }
   S.knownLive = lg ? lg.id+lg.live_at : '';
 }
 const refresh=()=>{ if(S.tour) loadAll().then(()=>{ notifyNew(); render(); }).catch(()=>{}); };
@@ -430,17 +864,17 @@ function render(){
   if(!S.tour) return;
   if(S.anon && !S.me){ screenJoin(''); return; }
   topRight(h('div',{style:'display:flex;align-items:center;gap:4px'},
-    h('button',{class:'btn btn-red',type:'button',style:'min-height:36px;padding:0 14px;font-size:13px;border-radius:18px;box-shadow:none',onclick:emergencySheet},'긴급'),
-    L()? h('button',{class:'linkbtn',type:'button',onclick:()=>{ closeTour(); screenTours(); }},'원정 목록')
-       : armButton(h('button',{class:'linkbtn',type:'button'},'나가기'),'나갑니다',leaveTour)));
-  const tabs = L()? [['notices','공지'],['schedule','일정'],['guide','가이드'],['check','점검'],['members','단원']] : [['notices','공지'],['schedule','일정'],['guide','가이드'],['check','점검'],['me','내 정보']];
+    h('button',{class:'btn btn-red',type:'button',style:'min-height:36px;padding:0 14px;font-size:13px;border-radius:18px;box-shadow:none',onclick:emergencySheet},T('긴급')),
+    L()? h('button',{class:'linkbtn',type:'button',onclick:()=>{ closeTour(); screenTours(); }},T('원정 목록'))
+       : armButton(h('button',{class:'linkbtn',type:'button'},T('나가기')),T('나갑니다'),leaveTour)));
+  const tabs = L()? [['notices',T('공지')],['schedule',T('일정')],['guide',T('가이드')],['check',T('점검')],['members',LANG==='en'?'Members':'단원']] : [['notices',T('공지')],['schedule',T('일정')],['guide',T('가이드')],['check',T('점검')],['me',T('내 정보')]];
   if(!tabs.some(t=>t[0]===S.tab)) S.tab='notices';
   const unseen = S.anon ? S.notices.filter(n=>!S.acks.some(a=>a.notice_id===n.id&&a.member_id===S.me.id)).length : 0;
   const oc=openCheck(), myMarked = S.anon&&oc ? S.marks.some(m=>m.check_id===oc.id&&m.member_id===S.me.id) : true;
-  const tabBar=h('nav',{class:'tabs',role:'tablist','aria-label':'화면'}, tabs.map(([k,label])=>h('button',{class:'tab',role:'tab',type:'button','aria-selected':String(S.tab===k),onclick:()=>{ S.tab=k; render(); window.scrollTo(0,0); }},
+  const tabBar=h('nav',{class:'tabs',role:'tablist','aria-label':T('화면')}, tabs.map(([k,label])=>h('button',{class:'tab',role:'tab',type:'button','aria-selected':String(S.tab===k),onclick:()=>{ S.tab=k; render(); window.scrollTo(0,0); }},
     icon(k), label, (k==='notices'&&unseen)?h('span',{class:'badge',text:String(unseen)}):null, (k==='check'&&S.anon&&oc&&!myMarked)?h('span',{class:'badge',text:'!'}):null)));
   const days=tourDays(), di=days.indexOf(today());
-  const eyebrow = (L()? 'LEADER · 초대 번호 '+S.tour.code : S.me.name+' · '+S.me.grp) + (di>=0? ' · '+(di+1)+'일째' : '');
+  const eyebrow = (L()? T('LEADER · 초대 번호 ')+S.tour.code : S.me.name+' · '+T(S.me.grp)) + (di>=0? ' · '+dn(di+1) : '');
   const head=h('div',{class:'title-block'},h('div',{class:'sub',text:eyebrow}),h('h1',{text:S.tour.name}));
   const body = S.tab==='schedule'?viewSchedule() : S.tab==='guide'?viewGuide() : S.tab==='check'?viewCheck() : S.tab==='members'?viewMembers() : S.tab==='me'?viewMe() : viewNotices();
   main(head, tabBar, body);
@@ -454,55 +888,55 @@ function viewNotices(){
   const wrap=h('div',{class:'stack'});
   const bc=briefCard(); if(bc) wrap.append(bc);
   if(L()){
-    const place=h('input',{class:'in',id:'nPlace',placeholder:'예: 카를교 동쪽 입구 탑 앞'});
+    const place=h('input',{class:'in',id:'nPlace',placeholder:T('예: 카를교 동쪽 입구 탑 앞')});
     const link=h('input',{class:'in',id:'nLink',inputmode:'url',placeholder:'https://maps.app.goo.gl/…'});
     const date=h('input',{class:'in',type:'date',id:'nDate',value:today()});
     const time=h('input',{class:'in',type:'time',id:'nTime'});
-    const msg=h('textarea',{class:'in',id:'nMsg',placeholder:'예: 도복 가방 챙겨서 모이세요. 리허설 장소로 함께 걸어갑니다.'});
-    const send=h('button',{class:'btn btn-red',type:'button'},'단원에게 공지 올리기');
+    const msg=h('textarea',{class:'in',id:'nMsg',placeholder:T('예: 도복 가방 챙겨서 모이세요. 리허설 장소로 함께 걸어갑니다.')});
+    const send=h('button',{class:'btn btn-red',type:'button'},T('단원에게 공지 올리기'));
     send.onclick=async()=>{
       const p=place.value.trim(), l=link.value.trim();
-      if(!p&&!l){ toast('모일 장소를 넣어 주세요'); place.focus(); return; }
-      if(l&&!isUrl(l)){ toast('구글 지도 주소는 https:// 로 시작해야 합니다'); link.focus(); return; }
-      if(!time.value){ toast('모이는 시간을 넣어 주세요'); time.focus(); return; }
+      if(!p&&!l){ toast(T('모일 장소를 넣어 주세요')); place.focus(); return; }
+      if(l&&!isUrl(l)){ toast(T('구글 지도 주소는 https:// 로 시작해야 합니다')); link.focus(); return; }
+      if(!time.value){ toast(T('모이는 시간을 넣어 주세요')); time.focus(); return; }
       send.disabled=true;
       const r=await S.sb.from('tour_notices').insert({tour_id:S.tour.id,date:date.value||today(),time:time.value,place:p,link:l,message:msg.value.trim()});
       send.disabled=false;
       if(r.error){ toast(errText(r.error)); return; }
-      toast('공지를 올렸습니다'); reloadSoon('notices');
+      toast(T('공지를 올렸습니다')); reloadSoon('notices');
     };
-    wrap.append(h('section',{class:'panel'},h('h2',{text:'모임 공지 보내기'}),
-      h('label',{class:'f'},'모일 장소 이름',place), h('label',{class:'f'},'구글 지도 주소 (있으면 붙여 넣기)',link),
-      h('div',{class:'grid2'},h('label',{class:'f'},'날짜',date),h('label',{class:'f'},'모이는 시간',time)),
-      h('label',{class:'f'},'전할 말',msg), send,
-      h('span',{class:'muted',text:'단원 앱이 열려 있으면 바로 뜨고, 닫혀 있으면 다음에 열 때 맨 위에 보입니다.'})));
+    wrap.append(h('section',{class:'panel'},h('h2',{text:T('모임 공지 보내기')}),
+      h('label',{class:'f'},T('모일 장소 이름'),place), h('label',{class:'f'},T('구글 지도 주소 (있으면 붙여 넣기)'),link),
+      h('div',{class:'grid2'},h('label',{class:'f'},T('날짜'),date),h('label',{class:'f'},T('모이는 시간'),time)),
+      h('label',{class:'f'},T('전할 말'),msg), send,
+      h('span',{class:'muted',text:T('단원 앱이 열려 있으면 바로 뜨고, 닫혀 있으면 다음에 열 때 맨 위에 보입니다.')})));
   }
-  if(!S.notices.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:'아직 공지가 없습니다'}),h('span',{text:L()?'위에서 모일 장소와 시간을 넣고 공지를 올려 주세요.':'지도자가 공지를 올리면 여기에 뜹니다.'}))); return wrap; }
+  if(!S.notices.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:T('아직 공지가 없습니다')}),h('span',{text:L()?T('위에서 모일 장소와 시간을 넣고 공지를 올려 주세요.'):T('지도자가 공지를 올리면 여기에 뜹니다.')}))); return wrap; }
   const real=S.members;
   S.notices.forEach((n,i)=>{
     const card=h('article',{class:'ncard'+(i===0?' new':'')});
     card.append(h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap'},
-      h('span',{class:'muted',text:dayLabel(n.date)+' 모임 · '+hm(n.created_at)+'에 올림'}), i===0?h('span',{class:'pill',text:'최신'}):null));
+      h('span',{class:'muted',text:dayLabel(n.date)+T(' 모임 · ')+hm(n.created_at)+T('에 올림')}), i===0?h('span',{class:'pill',text:T('최신')}):null));
     if(n.time) card.append(h('div',{class:'ntime',text:n.time}));
     if(n.place) card.append(h('div',{class:'nplace',text:n.place}));
     if(n.message) card.append(h('div',{class:'nmsg',text:n.message}));
     const btns=h('div',{class:'actions'}), target=n.link||n.place;
-    if(target) btns.append(h('a',{class:'btn btn-navy'+(L()?' wide':''),href:dirUrl(target),target:'_blank',rel:'noopener'},'구글 지도로 길 찾기'));
+    if(target) btns.append(h('a',{class:'btn btn-navy'+(L()?' wide':''),href:dirUrl(target),target:'_blank',rel:'noopener'},T('구글 지도로 길 찾기')));
     if(S.anon){
       const mine=S.acks.find(a=>a.notice_id===n.id&&a.member_id===S.me.id);
-      if(mine) btns.append(h('span',{class:'btn btn-ghost'},'확인함 · '+hm(mine.seen_at)));
-      else { const b=h('button',{class:'btn btn-red',type:'button'},'확인했어요'); b.onclick=async()=>{ b.disabled=true; const r=await S.sb.rpc('tour_ack',{p_token:S.token,p_notice:n.id}); if(r.error){ b.disabled=false; toast(errText(r.error)); return; } toast('확인했다고 지도자께 알렸습니다'); reloadSoon('acks'); }; btns.append(b); }
+      if(mine) btns.append(h('span',{class:'btn btn-ghost'},T('확인함 · ')+hm(mine.seen_at)));
+      else { const b=h('button',{class:'btn btn-red',type:'button'},T('확인했어요')); b.onclick=async()=>{ b.disabled=true; const r=await S.sb.rpc('tour_ack',{p_token:S.token,p_notice:n.id}); if(r.error){ b.disabled=false; toast(errText(r.error)); return; } toast(T('확인했다고 지도자께 알렸습니다')); reloadSoon('acks'); }; btns.append(b); }
     }
     card.append(btns);
     if(L()){
       const seen=seenBy(n.id), yes=real.filter(m=>seen.has(m.id)), no=real.filter(m=>!seen.has(m.id)&&m.token);
       const noPhone=real.filter(m=>!m.token).length;
       card.append(h('div',{style:'display:flex;gap:8px;align-items:center;flex-wrap:wrap'},
-        h('span',{class:'pill',text:'확인 '+yes.length+' / '+(real.length-noPhone)}),
-        no.length?h('span',{class:'pill warn',text:'아직 안 봄 '+no.length+'명'}):h('span',{class:'pill',text:(real.length-noPhone)?'모두 확인':'가입한 단원 없음'})));
-      if(no.length) card.append(h('div',{class:'who','aria-label':'아직 안 본 단원'},no.map(m=>h('span',{class:'no',text:m.name+' · '+m.grp}))));
-      if(yes.length){ const a=new Map(S.acks.filter(x=>x.notice_id===n.id).map(x=>[x.member_id,x.seen_at])); card.append(h('div',{class:'who','aria-label':'확인한 단원'},yes.map(m=>h('span',{text:m.name+' '+hm(a.get(m.id))})))); }
-      card.append(armButton(h('button',{class:'btn btn-ghost',type:'button',style:'min-height:40px;font-size:13px'},'공지 지우기'),'지웁니다',async()=>{ const r=await S.sb.from('tour_notices').delete().eq('id',n.id); if(r.error) toast(errText(r.error)); else { toast('공지를 지웠습니다'); reloadSoon('notices'); } }));
+        h('span',{class:'pill',text:T('확인 ')+yes.length+' / '+(real.length-noPhone)}),
+        no.length?h('span',{class:'pill warn',text:T('아직 안 봄 ')+no.length+T('명')}):h('span',{class:'pill',text:(real.length-noPhone)?T('모두 확인'):T('가입한 단원 없음')})));
+      if(no.length) card.append(h('div',{class:'who','aria-label':T('아직 안 본 단원')},no.map(m=>h('span',{class:'no',text:m.name+' · '+T(m.grp)}))));
+      if(yes.length){ const a=new Map(S.acks.filter(x=>x.notice_id===n.id).map(x=>[x.member_id,x.seen_at])); card.append(h('div',{class:'who','aria-label':T('확인한 단원')},yes.map(m=>h('span',{text:m.name+' '+hm(a.get(m.id))})))); }
+      card.append(armButton(h('button',{class:'btn btn-ghost',type:'button',style:'min-height:40px;font-size:13px'},T('공지 지우기')),T('지웁니다'),async()=>{ const r=await S.sb.from('tour_notices').delete().eq('id',n.id); if(r.error) toast(errText(r.error)); else { toast(T('공지를 지웠습니다')); reloadSoon('notices'); } }));
     }
     wrap.append(card);
   });
@@ -516,28 +950,28 @@ function viewSchedule(){
   const d=S.day, rows=S.stops.filter(s=>s.date===d).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
   const cities=[...new Set(rows.map(s=>s.city).filter(Boolean))];
   const wrap=h('div',{class:'stack'});
-  if(days.length) wrap.append(h('div',{class:'chips',role:'group','aria-label':'날짜 고르기'},days.map(x=>{ const dt=new Date(x+'T00:00:00'); return h('button',{class:'chip',type:'button','aria-pressed':String(x===d),onclick:()=>{ S.day=x; render(); }},dayNo(x,days)+'일째 · '+(dt.getMonth()+1)+'/'+dt.getDate()); })));
+  if(days.length) wrap.append(h('div',{class:'chips',role:'group','aria-label':T('날짜 고르기')},days.map(x=>{ const dt=new Date(x+'T00:00:00'); return h('button',{class:'chip',type:'button','aria-pressed':String(x===d),onclick:()=>{ S.day=x; render(); }},dn(dayNo(x,days))+' · '+(dt.getMonth()+1)+'/'+dt.getDate()); })));
   wrap.append(h('section',{class:'hero'},
-    h('div',{class:'row'},h('span',{text:days.length?dayNo(d,days)+'일째':'오늘'}),h('span',{text:'체크 '+rows.filter(s=>s.done).length+' / '+rows.length})),
+    h('div',{class:'row'},h('span',{text:days.length?dn(dayNo(d,days)):T('오늘')}),h('span',{text:T('체크 ')+rows.filter(s=>s.done).length+' / '+rows.length})),
     h('div',{style:'font-size:26px;font-weight:900;line-height:1.2',text:dayLabel(d)}),
-    h('div',{class:'row'},h('span',{text:cities.length?cities.join(' → '):'도시를 넣으면 여기에 보입니다'}))));
-  if(L()) wrap.append(h('div',{class:'actions'},h('button',{class:'btn btn-red',type:'button',onclick:()=>stopSheet({date:d})},'일정 추가'),h('button',{class:'btn btn-line',type:'button',onclick:openReport},'활동 보고서 만들기')));
-  if(!rows.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:'이날 일정이 아직 없습니다'}),h('span',{text:L()?'「일정 추가」로 넣어 주세요.':'지도자가 일정을 넣으면 여기에 보입니다.'})), viewJournal(d)); return wrap; }
+    h('div',{class:'row'},h('span',{text:cities.length?cities.join(' → '):T('도시를 넣으면 여기에 보입니다')}))));
+  if(L()) wrap.append(h('div',{class:'actions'},h('button',{class:'btn btn-red',type:'button',onclick:()=>stopSheet({date:d})},T('일정 추가')),h('button',{class:'btn btn-line',type:'button',onclick:openReport},T('활동 보고서 만들기'))));
+  if(!rows.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:T('이날 일정이 아직 없습니다')}),h('span',{text:L()?T('「일정 추가」로 넣어 주세요.'):T('지도자가 일정을 넣으면 여기에 보입니다.')})), viewJournal(d)); return wrap; }
   wrap.append(h('div',{class:'list'},rows.map(s=>{
-    const cb=h('input',{type:'checkbox','aria-label':s.title+' 다녀옴'}); cb.checked=!!s.done; cb.disabled=!L();
+    const cb=h('input',{type:'checkbox','aria-label':s.title+T(' 다녀옴')}); cb.checked=!!s.done; cb.disabled=!L();
     cb.onchange=async()=>{ const r=await S.sb.from('tour_stops').update({done:cb.checked}).eq('id',s.id); if(r.error){ cb.checked=!cb.checked; toast(errText(r.error)); } else reloadSoon('stops'); };
     const has=!!(s.place||s.city);
     return h('div',{class:'row-item'+(s.done?' done':'')},cb,
       h(L()?'button':'div',{class:'row-body',type:L()?'button':null,onclick:L()?()=>stopSheet(s):null},
         h('span',{class:'ttl',text:(s.time?s.time+' · ':'')+s.title}),
-        h('span',{},h('span',{class:'tag'+(s.type==='공연'||s.type==='리허설'?' show':''),text:s.type})),
+        h('span',{},h('span',{class:'tag'+(s.type==='공연'||s.type==='리허설'?' show':''),text:T(s.type)})),
         has?h('span',{class:'muted',text:[s.place,s.city].filter(Boolean).join(' · ')}):null,
-        s.contact?h('span',{class:'muted',text:'연락처 '+s.contact}):null,
+        s.contact?h('span',{class:'muted',text:T('연락처 ')+s.contact}):null,
         s.memo?h('span',{class:'muted',text:s.memo}):null),
       h('div',{style:'display:flex;flex-direction:column;gap:6px;align-items:flex-end'},
-        has?h('a',{class:'maplink',href:dirUrl([s.place,s.city].filter(Boolean).join(', ')),target:'_blank',rel:'noopener'},'길 찾기'):null,
-        S.guides.some(g=>g.stop_id===s.id)?h('button',{class:'maplink',type:'button',onclick:()=>{ S.tab='guide'; S.openGuide=S.guides.find(g=>g.stop_id===s.id).id; render(); window.scrollTo(0,0); }},'해설 듣기'):null,
-        (s.type==='공연'||s.type==='리허설'||S.cues.some(c=>c.stop_id===s.id))?h('button',{class:'maplink',type:'button',style:'color:var(--red-ink)',onclick:()=>cueSheet(s)},'순서표'+(S.cues.some(c=>c.stop_id===s.id)?' '+S.cues.filter(c=>c.stop_id===s.id).length:'')):null));
+        has?h('a',{class:'maplink',href:dirUrl([s.place,s.city].filter(Boolean).join(', ')),target:'_blank',rel:'noopener'},T('길 찾기')):null,
+        S.guides.some(g=>g.stop_id===s.id)?h('button',{class:'maplink',type:'button',onclick:()=>{ S.tab='guide'; S.openGuide=S.guides.find(g=>g.stop_id===s.id).id; render(); window.scrollTo(0,0); }},T('해설 듣기')):null,
+        (s.type==='공연'||s.type==='리허설'||S.cues.some(c=>c.stop_id===s.id))?h('button',{class:'maplink',type:'button',style:'color:var(--red-ink)',onclick:()=>cueSheet(s)},T('순서표')+(S.cues.some(c=>c.stop_id===s.id)?' '+S.cues.filter(c=>c.stop_id===s.id).length:'')):null));
   })));
   wrap.append(viewJournal(d));
   return wrap;
@@ -545,121 +979,124 @@ function viewSchedule(){
 function stopSheet(s){
   const f={};
   f.date=h('input',{class:'in',type:'date',value:s.date||S.day||today()}); f.time=h('input',{class:'in',type:'time',value:s.time||''});
-  let type=s.type||'관광'; const types=h('div',{class:'catsel',role:'group','aria-label':'일정 종류'});
+  let type=s.type||'관광'; const types=h('div',{class:'catsel',role:'group','aria-label':T('일정 종류')});
   const paint=()=>[...types.children].forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.c===type)));
-  TYPES.forEach(t=>types.append(h('button',{type:'button','data-c':t,onclick:()=>{ type=t; paint(); }},t))); paint();
-  f.title=h('input',{class:'in',value:s.title||'',placeholder:'예: 프라하성 관광'}); f.place=h('input',{class:'in',value:s.place||'',placeholder:'예: Prague Castle'});
-  f.city=h('input',{class:'in',value:s.city||'',placeholder:'예: 프라하'}); f.contact=h('input',{class:'in',value:s.contact||'',placeholder:'공연·숙소 담당자'});
-  f.memo=h('textarea',{class:'in',placeholder:'예: 리허설 16:00, 무대 8m × 6m'}); f.memo.value=s.memo||'';
-  const save=h('button',{class:'btn btn-red wide',type:'button'},'일정 저장');
+  TYPES.forEach(t=>types.append(h('button',{type:'button','data-c':t,onclick:()=>{ type=t; paint(); }},T(t)))); paint();
+  f.title=h('input',{class:'in',value:s.title||'',placeholder:T('예: 프라하성 관광')}); f.place=h('input',{class:'in',value:s.place||'',placeholder:T('예: Prague Castle')});
+  f.city=h('input',{class:'in',value:s.city||'',placeholder:T('예: 프라하')}); f.contact=h('input',{class:'in',value:s.contact||'',placeholder:T('공연·숙소 담당자')});
+  f.memo=h('textarea',{class:'in',placeholder:T('예: 리허설 16:00, 무대 8m × 6m')}); f.memo.value=s.memo||'';
+  const save=h('button',{class:'btn btn-red wide',type:'button'},T('일정 저장'));
   save.onclick=async()=>{
-    if(!f.date.value){ toast('날짜를 넣어 주세요'); return; } if(!f.title.value.trim()){ toast('일정 이름을 넣어 주세요'); f.title.focus(); return; }
+    if(!f.date.value){ toast(T('날짜를 넣어 주세요')); return; } if(!f.title.value.trim()){ toast(T('일정 이름을 넣어 주세요')); f.title.focus(); return; }
     const row={tour_id:S.tour.id,date:f.date.value,time:f.time.value||'',type,title:f.title.value.trim(),place:f.place.value.trim(),city:f.city.value.trim(),contact:f.contact.value.trim(),memo:f.memo.value.trim()};
     save.disabled=true; const r = s.id ? await S.sb.from('tour_stops').update(row).eq('id',s.id) : await S.sb.from('tour_stops').insert(row); save.disabled=false;
-    if(r.error){ toast(errText(r.error)); return; } S.day=row.date; closeSheet(); toast('일정을 저장했습니다'); reloadSoon('stops');
+    if(r.error){ toast(errText(r.error)); return; } S.day=row.date; closeSheet(); toast(T('일정을 저장했습니다')); reloadSoon('stops');
   };
   const acts=h('div',{class:'actions'},save);
-  if(s.id) acts.append(armButton(h('button',{class:'btn btn-ghost wide',type:'button'},'이 일정 삭제'),'삭제됩니다',async()=>{ const r=await S.sb.from('tour_stops').delete().eq('id',s.id); if(r.error) toast(errText(r.error)); else { closeSheet(); toast('일정을 삭제했습니다'); reloadSoon('stops'); } }));
-  openSheet(s.id?'일정 고치기':'일정 추가',[h('div',{class:'grid2'},h('label',{class:'f'},'날짜',f.date),h('label',{class:'f'},'시간',f.time)),
-    h('div',{class:'f',style:'display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)'},'종류',types),
-    h('label',{class:'f'},'일정 이름',f.title), h('label',{class:'f'},'장소 (구글 지도에서 찾을 이름이나 주소)',f.place),
-    h('div',{class:'grid2'},h('label',{class:'f'},'도시',f.city),h('label',{class:'f'},'현지 담당자 연락처',f.contact)),
-    h('label',{class:'f'},'메모',f.memo), acts]);
+  if(s.id) acts.append(armButton(h('button',{class:'btn btn-ghost wide',type:'button'},T('이 일정 삭제')),T('삭제됩니다'),async()=>{ const r=await S.sb.from('tour_stops').delete().eq('id',s.id); if(r.error) toast(errText(r.error)); else { closeSheet(); toast(T('일정을 삭제했습니다')); reloadSoon('stops'); } }));
+  openSheet(s.id?T('일정 고치기'):T('일정 추가'),[h('div',{class:'grid2'},h('label',{class:'f'},T('날짜'),f.date),h('label',{class:'f'},T('시간'),f.time)),
+    h('div',{class:'f',style:'display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)'},T('종류'),types),
+    h('label',{class:'f'},T('일정 이름'),f.title), h('label',{class:'f'},T('장소 (구글 지도에서 찾을 이름이나 주소)'),f.place),
+    h('div',{class:'grid2'},h('label',{class:'f'},T('도시'),f.city),h('label',{class:'f'},T('현지 담당자 연락처'),f.contact)),
+    h('label',{class:'f'},T('메모'),f.memo), acts]);
 }
 
 /* ---------- AI 해설 가이드 (휴대폰 음성으로 읽기) ---------- */
 const TTS={ playing:null, queue:[] };
 function koVoice(){
   if(!('speechSynthesis' in window)) return null;
-  const vs=speechSynthesis.getVoices().filter(v=>/^ko/i.test(v.lang));
+  const vs=speechSynthesis.getVoices().filter(v=>new RegExp('^'+(LANG==='en'?'en':'ko'),'i').test(v.lang));
   return vs.find(v=>/natural|google|yuna|sunhi|heami|online/i.test(v.name))||vs[0]||null;
 }
 if('speechSynthesis' in window) speechSynthesis.onvoiceschanged=()=>{};
 function stopSpeak(){ try{ speechSynthesis.cancel(); }catch(e){} TTS.playing=null; TTS.queue=[]; }
 function speak(g){
-  if(!('speechSynthesis' in window)){ toast('이 휴대폰은 읽어 주기를 지원하지 않습니다'); return; }
+  if(!('speechSynthesis' in window)){ toast(T('이 휴대폰은 읽어 주기를 지원하지 않습니다')); return; }
   stopSpeak();
   const parts=String(g.script||'').replace(/\s+/g,' ').split(/(?<=[.!?。…])\s+|(?<=다\.)\s*/).map(x=>x.trim()).filter(Boolean);
   const chunks=[]; let cur='';
   parts.forEach(p=>{ if((cur+' '+p).length>180){ if(cur) chunks.push(cur); cur=p; } else cur=cur?cur+' '+p:p; }); if(cur) chunks.push(cur);
-  if(!chunks.length){ toast('해설 글이 비어 있습니다'); return; }
+  if(!chunks.length){ toast(T('해설 글이 비어 있습니다')); return; }
   TTS.playing=g.id; TTS.queue=chunks.slice();
   const v=koVoice();
   const next=()=>{
     if(TTS.playing!==g.id) return;
     const t=TTS.queue.shift(); if(!t){ TTS.playing=null; render(); return; }
-    const u=new SpeechSynthesisUtterance(t); u.lang='ko-KR'; if(v) u.voice=v; u.rate=S.rate; u.onend=next; u.onerror=()=>{ TTS.playing=null; render(); };
+    const u=new SpeechSynthesisUtterance(t); u.lang=LANG==='en'?'en-US':'ko-KR'; if(v) u.voice=v; u.rate=S.rate; u.onend=next; u.onerror=()=>{ TTS.playing=null; render(); };
     speechSynthesis.speak(u);
   };
   next(); render();
 }
 async function wikiIntro(q){
-  const base='https://ko.wikipedia.org/w/api.php?format=json&origin=*&';
+  const base='https://'+(LANG==='en'?'en':'ko')+'.wikipedia.org/w/api.php?format=json&origin=*&';
   const s=await fetch(base+'action=query&list=search&srlimit=1&srsearch='+encodeURIComponent(q)).then(r=>r.json());
   const hit=s&&s.query&&s.query.search&&s.query.search[0]; if(!hit) return null;
   const e=await fetch(base+'action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&titles='+encodeURIComponent(hit.title)).then(r=>r.json());
   const pg=Object.values((e&&e.query&&e.query.pages)||{})[0]; if(!pg||!pg.extract) return null;
-  return {title:pg.title, text:pg.extract.replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim(), url:'https://ko.wikipedia.org/wiki/'+encodeURIComponent(pg.title.replace(/ /g,'_'))};
+  return {title:pg.title, text:pg.extract.replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim(), url:'https://'+(LANG==='en'?'en':'ko')+'.wikipedia.org/wiki/'+encodeURIComponent(pg.title.replace(/ /g,'_'))};
 }
 function guideSheet(g){
-  const title=h('input',{class:'in',value:g.title||'',placeholder:'예: 프라하성'});
-  const stopSel=h('select',{class:'in'},h('option',{value:''},'연결 안 함'),
+  const title=h('input',{class:'in',value:g.title||'',placeholder:T('예: 프라하성')});
+  const stopSel=h('select',{class:'in'},h('option',{value:''},T('연결 안 함')),
     [...S.stops].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).map(s=>h('option',{value:s.id,selected:g.stop_id===s.id||null},dayLabel(s.date)+' · '+s.title)));
-  const script=h('textarea',{class:'in',style:'min-height:220px;line-height:1.7',placeholder:'해설 글을 쓰거나, 아래 단추로 위키백과 설명을 가져오세요.'}); script.value=g.script||'';
-  const src=h('span',{class:'muted',text:g.source_url?'출처: 위키백과':''}); let srcUrl=g.source_url||'';
-  const count=h('span',{class:'muted'}); const upd=()=>{ const n=script.value.length; count.textContent=n+'자 · 약 '+Math.max(1,Math.round(n/280))+'분'; }; script.oninput=upd; upd();
-  const wiki=h('button',{class:'btn btn-navy',type:'button'},'위키백과에서 가져오기');
-  wiki.onclick=async()=>{ const q=title.value.trim(); if(!q){ toast('장소 이름을 먼저 넣어 주세요'); title.focus(); return; }
-    wiki.disabled=true; wiki.textContent='찾는 중…';
-    try{ const w=await wikiIntro(q); if(!w){ toast('위키백과에서 찾지 못했습니다. 다른 이름(영어·현지어)으로 해 보세요'); return; }
-      script.value='여러분, 지금 우리가 와 있는 곳은 '+w.title+'입니다. '+w.text.slice(0,1400); srcUrl=w.url; src.textContent='출처: 위키백과 「'+w.title+'」'; upd(); toast('가져왔습니다. 읽기 쉽게 고쳐 주세요'); }
-    catch(e){ toast('인터넷 연결을 확인해 주세요'); } finally{ wiki.disabled=false; wiki.textContent='위키백과에서 가져오기'; } };
-  const ask=h('button',{class:'btn btn-line',type:'button'},'Claude에게 부탁할 글 복사');
-  ask.onclick=async()=>{ const q=title.value.trim()||'이 장소';
-    const prompt='태권도 시범단 중고등학생 단원들에게 이어폰으로 들려줄 「'+q+'」 관광 해설을 써 줘. 2~3분 분량(700자 안팎), 쉬운 존댓말, 소리 내어 읽기 좋게 짧은 문장으로. 역사 한두 가지, 꼭 볼 것, 재미있는 이야기 하나, 사진 찍기 좋은 곳을 넣어 줘. 해설 글만 써 줘.';
-    try{ await navigator.clipboard.writeText(prompt); toast('복사했습니다. Claude에 붙여 넣고, 받은 해설을 위 칸에 붙여 넣으세요'); }catch(e){ script.value=prompt; upd(); toast('복사가 안 돼서 칸에 넣었습니다. 길게 눌러 복사해 주세요'); } };
-  const prev=h('button',{class:'btn btn-ghost',type:'button',onclick:()=>speak({id:'preview',script:script.value})},'미리 듣기');
-  const save=h('button',{class:'btn btn-red wide',type:'button'},'해설 저장');
-  save.onclick=async()=>{ if(!title.value.trim()){ toast('장소 이름을 넣어 주세요'); title.focus(); return; } if(!script.value.trim()){ toast('해설 글을 넣어 주세요'); script.focus(); return; }
+  const script=h('textarea',{class:'in',style:'min-height:220px;line-height:1.7',placeholder:T('해설 글을 쓰거나, 아래 단추로 위키백과 설명을 가져오세요.')}); script.value=g.script||'';
+  const src=h('span',{class:'muted',text:g.source_url?T('출처: 위키백과'):''}); let srcUrl=g.source_url||'';
+  const count=h('span',{class:'muted'}); const upd=()=>{ const n=script.value.length; count.textContent=n+T('자 · 약 ')+Math.max(1,Math.round(n/280))+T('분'); }; script.oninput=upd; upd();
+  const wiki=h('button',{class:'btn btn-navy',type:'button'},T('위키백과에서 가져오기'));
+  wiki.onclick=async()=>{ const q=title.value.trim(); if(!q){ toast(T('장소 이름을 먼저 넣어 주세요')); title.focus(); return; }
+    wiki.disabled=true; wiki.textContent=T('찾는 중…');
+    try{ const w=await wikiIntro(q); if(!w){ toast(T('위키백과에서 찾지 못했습니다. 다른 이름(영어·현지어)으로 해 보세요')); return; }
+      script.value=T('여러분, 지금 우리가 와 있는 곳은 ')+w.title+T('입니다. ')+w.text.slice(0,1400); srcUrl=w.url; src.textContent=T('출처: 위키백과 「')+w.title+'」'; upd(); toast(T('가져왔습니다. 읽기 쉽게 고쳐 주세요')); }
+    catch(e){ toast(T('인터넷 연결을 확인해 주세요')); } finally{ wiki.disabled=false; wiki.textContent=T('위키백과에서 가져오기'); } };
+  const ask=h('button',{class:'btn btn-line',type:'button'},T('Claude에게 부탁할 글 복사'));
+  ask.onclick=async()=>{ const q=title.value.trim()||T('이 장소');
+    const prompt=T('태권도 시범단 중고등학생 단원들에게 이어폰으로 들려줄 「')+q+T('」 관광 해설을 써 줘. 2~3분 분량(700자 안팎), 쉬운 존댓말, 소리 내어 읽기 좋게 짧은 문장으로. 역사 한두 가지, 꼭 볼 것, 재미있는 이야기 하나, 사진 찍기 좋은 곳을 넣어 줘. 해설 글만 써 줘.');
+    try{ await navigator.clipboard.writeText(prompt); toast(T('복사했습니다. Claude에 붙여 넣고, 받은 해설을 위 칸에 붙여 넣으세요')); }catch(e){ script.value=prompt; upd(); toast(T('복사가 안 돼서 칸에 넣었습니다. 길게 눌러 복사해 주세요')); } };
+  const prev=h('button',{class:'btn btn-ghost',type:'button',onclick:()=>speak({id:'preview',script:script.value})},T('미리 듣기'));
+  const save=h('button',{class:'btn btn-red wide',type:'button'},T('해설 저장'));
+  save.onclick=async()=>{ if(!title.value.trim()){ toast(T('장소 이름을 넣어 주세요')); title.focus(); return; } if(!script.value.trim()){ toast(T('해설 글을 넣어 주세요')); script.focus(); return; }
     const row={tour_id:S.tour.id,title:title.value.trim().slice(0,60),script:script.value.trim().slice(0,6000),stop_id:stopSel.value||null,source_url:srcUrl||''};
     save.disabled=true; const r=g.id? await S.sb.from('tour_guides').update(row).eq('id',g.id) : await S.sb.from('tour_guides').insert(row); save.disabled=false;
-    if(r.error){ toast(errText(r.error)); return; } stopSpeak(); closeSheet(); toast('해설을 저장했습니다'); reloadSoon('guides'); };
+    if(r.error){ toast(errText(r.error)); return; } stopSpeak(); closeSheet(); toast(T('해설을 저장했습니다')); reloadSoon('guides'); };
   const acts=h('div',{class:'actions'},prev,h('span'),save);
-  if(g.id) acts.append(armButton(h('button',{class:'btn btn-ghost wide',type:'button'},'이 해설 삭제'),'삭제됩니다',async()=>{ const r=await S.sb.from('tour_guides').delete().eq('id',g.id); if(r.error) toast(errText(r.error)); else { stopSpeak(); closeSheet(); toast('해설을 삭제했습니다'); reloadSoon('guides'); } }));
-  openSheet(g.id?'해설 고치기':'해설 만들기',[h('label',{class:'f'},'장소 이름',title),h('label',{class:'f'},'연결할 일정',stopSel),
-    h('div',{class:'actions'},wiki,ask), h('label',{class:'f'},'해설 글',script), h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},count,src), acts]);
+  if(g.id) acts.append(armButton(h('button',{class:'btn btn-ghost wide',type:'button'},T('이 해설 삭제')),T('삭제됩니다'),async()=>{ const r=await S.sb.from('tour_guides').delete().eq('id',g.id); if(r.error) toast(errText(r.error)); else { stopSpeak(); closeSheet(); toast(T('해설을 삭제했습니다')); reloadSoon('guides'); } }));
+  openSheet(g.id?T('해설 고치기'):T('해설 만들기'),[h('label',{class:'f'},T('장소 이름'),title),h('label',{class:'f'},T('연결할 일정'),stopSel),
+    h('div',{class:'actions'},wiki,ask), h('label',{class:'f'},T('해설 글'),script), h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},count,src), acts]);
 }
 function rateChips(){
-  return h('div',{class:'catsel',role:'group','aria-label':'읽는 빠르기'},[['0.85','천천히'],['1','보통'],['1.2','빠르게']].map(([v,l])=>h('button',{type:'button','aria-pressed':String(S.rate===Number(v)),onclick:()=>{ S.rate=Number(v); store.set('ttsRate',v); render(); }},l)));
+  return h('div',{class:'catsel',role:'group','aria-label':T('읽는 빠르기')},[['0.85',T('천천히')],['1',T('보통')],['1.2',T('빠르게')]].map(([v,l])=>h('button',{type:'button','aria-pressed':String(S.rate===Number(v)),onclick:()=>{ S.rate=Number(v); store.set('ttsRate',v); render(); }},l)));
 }
 function viewGuide(){
+  const seg=h('div',{class:'catsel',role:'group','aria-label':T('가이드 종류'),style:'display:grid;grid-template-columns:1fr 1fr'},[['audio',T('해설 듣기')],['learn',T('현지어 배우기')]].map(([k,l])=>h('button',{type:'button',style:'height:44px;font-size:14px','aria-pressed':String((S.guideMode||'audio')===k),onclick:()=>{ S.guideMode=k; stopSpeak(); render(); }},l)));
+  if(S.guideMode==='learn'){ const w=viewLearn(); w.prepend(seg); return w; }
   const wrap=h('div',{class:'stack'}), lg=liveGuide();
-  if(!('speechSynthesis' in window)) wrap.append(h('div',{class:'banner'},h('span',{text:'이 휴대폰 브라우저는 읽어 주기를 지원하지 않습니다. 해설 글을 읽어 주세요.'})));
+  wrap.append(seg);
+  if(!('speechSynthesis' in window)) wrap.append(h('div',{class:'banner'},h('span',{text:T('이 휴대폰 브라우저는 읽어 주기를 지원하지 않습니다. 해설 글을 읽어 주세요.')})));
   if(lg){
     const on=TTS.playing===lg.id;
-    wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:'지금 해설'}),h('span',{text:hm(lg.live_at)+' 시작'})),
+    wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:T('지금 해설')}),h('span',{text:hm(lg.live_at)+T(' 시작')})),
       h('div',{style:'font-size:26px;font-weight:900',text:lg.title}),
-      h('button',{class:'btn btn-big '+(on?'btn-ghost':'btn-red'),type:'button',onclick:()=>on?(stopSpeak(),render()):speak(lg)},on?'멈추기':'이어폰 끼고 듣기')));
+      h('button',{class:'btn btn-big '+(on?'btn-ghost':'btn-red'),type:'button',onclick:()=>on?(stopSpeak(),render()):speak(lg)},on?T('멈추기'):T('이어폰 끼고 듣기'))));
   }
-  if(L()) wrap.append(h('button',{class:'btn btn-red',type:'button',onclick:()=>guideSheet({stop_id:null})},'해설 만들기'));
-  wrap.append(h('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap'},h('span',{class:'muted',text:'읽는 빠르기'}),rateChips()));
-  if(!S.guides.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:'아직 해설이 없습니다'}),h('span',{text:L()?'「해설 만들기」에서 장소 이름을 넣고 위키백과 설명을 가져오거나, Claude에게 해설을 부탁해 붙여 넣으세요.':'지도자가 해설을 만들면 여기에서 들을 수 있습니다.'}))); return wrap; }
+  if(L()) wrap.append(h('button',{class:'btn btn-red',type:'button',onclick:()=>guideSheet({stop_id:null})},T('해설 만들기')));
+  wrap.append(h('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap'},h('span',{class:'muted',text:T('읽는 빠르기')}),rateChips()));
+  if(!S.guides.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:T('아직 해설이 없습니다')}),h('span',{text:L()?T('「해설 만들기」에서 장소 이름을 넣고 위키백과 설명을 가져오거나, Claude에게 해설을 부탁해 붙여 넣으세요.'):T('지도자가 해설을 만들면 여기에서 들을 수 있습니다.')}))); return wrap; }
   const list=[...S.guides].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   if(S.openGuide){ const i=list.findIndex(g=>g.id===S.openGuide); if(i>0) list.unshift(list.splice(i,1)[0]); }
   list.forEach(g=>{
     const on=TTS.playing===g.id, st=S.stops.find(s=>s.id===g.stop_id), open=S.openGuide===g.id;
     const card=h('article',{class:'ncard'+(open?' new':'')},
-      h('div',{style:'display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{class:'nplace',text:g.title}),h('span',{class:'muted',text:'약 '+Math.max(1,Math.round((g.script||'').length/280))+'분'})),
+      h('div',{style:'display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{class:'nplace',text:g.title}),h('span',{class:'muted',text:T('약 ')+Math.max(1,Math.round((g.script||'').length/280))+T('분')})),
       st?h('span',{class:'muted',text:dayLabel(st.date)+' · '+st.title}):null);
     const body=h('div',{class:'nmsg',style:'max-height:'+(open?'none':'4.8em')+';overflow:hidden;color:var(--muted)',text:g.script});
-    card.append(body, h('button',{class:'linkbtn',type:'button',style:'align-self:flex-start;min-height:32px',onclick:()=>{ S.openGuide=open?null:g.id; render(); }},open?'접기':'글 전체 보기'));
-    const acts=h('div',{class:'actions'},h('button',{class:'btn '+(on?'btn-ghost':'btn-navy'),type:'button',onclick:()=>on?(stopSpeak(),render()):speak(g)},on?'멈추기':'듣기'));
+    card.append(body, h('button',{class:'linkbtn',type:'button',style:'align-self:flex-start;min-height:32px',onclick:()=>{ S.openGuide=open?null:g.id; render(); }},open?T('접기'):T('글 전체 보기')));
+    const acts=h('div',{class:'actions'},h('button',{class:'btn '+(on?'btn-ghost':'btn-navy'),type:'button',onclick:()=>on?(stopSpeak(),render()):speak(g)},on?T('멈추기'):T('듣기')));
     if(L()){
-      acts.append(h('button',{class:'btn btn-red',type:'button',onclick:async()=>{ const r=await S.sb.from('tour_guides').update({live_at:new Date().toISOString()}).eq('id',g.id); if(r.error) toast(errText(r.error)); else { toast('단원 휴대폰에 「지금 해설」이 뜹니다'); reloadSoon('guides'); } }},'모두에게 지금 재생'));
-      acts.append(h('button',{class:'btn btn-ghost wide',type:'button',style:'min-height:40px;font-size:13px',onclick:()=>guideSheet(g)},'고치기'));
+      acts.append(h('button',{class:'btn btn-red',type:'button',onclick:async()=>{ const r=await S.sb.from('tour_guides').update({live_at:new Date().toISOString()}).eq('id',g.id); if(r.error) toast(errText(r.error)); else { toast(T('단원 휴대폰에 「지금 해설」이 뜹니다')); reloadSoon('guides'); } }},T('모두에게 지금 재생')));
+      acts.append(h('button',{class:'btn btn-ghost wide',type:'button',style:'min-height:40px;font-size:13px',onclick:()=>guideSheet(g)},T('고치기')));
     }
     card.append(acts);
-    if(g.source_url) card.append(h('a',{class:'muted',href:g.source_url,target:'_blank',rel:'noopener'},'출처: 위키백과'));
+    if(g.source_url) card.append(h('a',{class:'muted',href:g.source_url,target:'_blank',rel:'noopener'},T('출처: 위키백과')));
     wrap.append(card);
   });
   return wrap;
@@ -680,35 +1117,35 @@ async function saveJournal(date, patch){
 }
 function viewJournal(d){
   const j=S.journal.find(x=>x.date===d)||{memo:'',photos:[]};
-  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:8px'},h('h2',{text:'오늘의 기록'}),h('span',{class:'muted',text:'사진 '+j.photos.length+'장'})));
+  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:8px'},h('h2',{text:T('오늘의 기록')}),h('span',{class:'muted',text:T('사진 ')+j.photos.length+T('장')})));
   if(j.photos.length){
     sec.append(h('div',{style:'display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px'},j.photos.map(p=>{
-      const cell=h('div',{style:'position:relative'},h('a',{href:photoUrl(p),target:'_blank',rel:'noopener'},h('img',{src:photoUrl(p),alt:dayLabel(d)+' 활동 사진',loading:'lazy',style:'width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:var(--soft)'})));
-      if(L()) cell.append(armButton(h('button',{type:'button','aria-label':'사진 지우기',style:'position:absolute;top:4px;right:4px;min-height:28px;border:0;border-radius:14px;padding:0 8px;background:rgba(11,18,32,.7);color:#fff;font-size:12px'},'지우기'),'지움',async()=>{
-        try{ await saveJournal(d,{photos:j.photos.filter(x=>x!==p)}); S.sb.storage.from(BUCKET).remove([p]).catch(()=>{}); toast('사진을 지웠습니다'); render(); }catch(e){ toast(errText(e)); } }));
+      const cell=h('div',{style:'position:relative'},h('a',{href:photoUrl(p),target:'_blank',rel:'noopener'},h('img',{src:photoUrl(p),alt:dayLabel(d)+T(' 활동 사진'),loading:'lazy',style:'width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:var(--soft)'})));
+      if(L()) cell.append(armButton(h('button',{type:'button','aria-label':T('사진 지우기'),style:'position:absolute;top:4px;right:4px;min-height:28px;border:0;border-radius:14px;padding:0 8px;background:rgba(11,18,32,.7);color:#fff;font-size:12px'},T('지우기')),T('지움'),async()=>{
+        try{ await saveJournal(d,{photos:j.photos.filter(x=>x!==p)}); S.sb.storage.from(BUCKET).remove([p]).catch(()=>{}); toast(T('사진을 지웠습니다')); render(); }catch(e){ toast(errText(e)); } }));
       return cell; })));
-  } else if(!L() && !j.memo) sec.append(h('span',{class:'muted',text:'아직 이날 기록이 없습니다.'}));
+  } else if(!L() && !j.memo) sec.append(h('span',{class:'muted',text:T('아직 이날 기록이 없습니다.')}));
   if(L()){
-    const memo=h('textarea',{class:'in',placeholder:'예: 구시가지 광장 공연, 관객 반응 아주 좋았음. 다음 공연은 매트 추가.'}); memo.value=j.memo||'';
+    const memo=h('textarea',{class:'in',placeholder:T('예: 구시가지 광장 공연, 관객 반응 아주 좋았음. 다음 공연은 매트 추가.')}); memo.value=j.memo||'';
     const pick=h('input',{type:'file',accept:'image/*',multiple:true,hidden:true});
-    const add=h('button',{class:'btn btn-navy',type:'button',onclick:()=>pick.click()},'사진 올리기');
+    const add=h('button',{class:'btn btn-navy',type:'button',onclick:()=>pick.click()},T('사진 올리기'));
     pick.onchange=async()=>{
       const files=[...pick.files].slice(0,20); pick.value=''; if(!files.length) return;
       add.disabled=true; const added=[];
       for(let i=0;i<files.length;i++){
-        add.textContent='올리는 중 '+(i+1)+' / '+files.length;
+        add.textContent=T('올리는 중 ')+(i+1)+' / '+files.length;
         try{ const b=await shrinkPhoto(files[i]); const path=S.tour.id+'/'+d+'/'+crypto.randomUUID()+'.jpg';
           const r=await S.sb.storage.from(BUCKET).upload(path,b,{contentType:'image/jpeg',upsert:false}); if(r.error) throw r.error; added.push(path); }
-        catch(e){ toast('사진 한 장을 올리지 못했습니다'); }
+        catch(e){ toast(T('사진 한 장을 올리지 못했습니다')); }
       }
-      try{ if(added.length){ const cur=S.journal.find(x=>x.date===d); await saveJournal(d,{photos:(cur?cur.photos:[]).concat(added)}); toast('사진 '+added.length+'장을 올렸습니다'); } }
+      try{ if(added.length){ const cur=S.journal.find(x=>x.date===d); await saveJournal(d,{photos:(cur?cur.photos:[]).concat(added)}); toast(T('사진 ')+added.length+T('장을 올렸습니다')); } }
       catch(e){ toast(errText(e)); }
-      add.disabled=false; add.textContent='사진 올리기'; render();
+      add.disabled=false; add.textContent=T('사진 올리기'); render();
     };
-    const save=h('button',{class:'btn btn-ghost',type:'button'},'메모 저장');
-    save.onclick=async()=>{ save.disabled=true; try{ await saveJournal(d,{memo:memo.value.trim().slice(0,3000)}); toast('메모를 저장했습니다'); }catch(e){ toast(errText(e)); } save.disabled=false; };
-    sec.append(h('label',{class:'f'},'메모',memo), h('div',{class:'actions'},add,save), pick,
-      h('span',{class:'muted',text:'사진은 짐작할 수 없는 긴 주소로 저장되어 앱 안에서만 보입니다. 단원 화면에도 이날 기록이 보입니다. 마지막에 「활동 보고서 만들기」로 날짜별 일정·점검·메모·사진을 한 번에 인쇄하거나 PDF로 저장할 수 있습니다.'}));
+    const save=h('button',{class:'btn btn-ghost',type:'button'},T('메모 저장'));
+    save.onclick=async()=>{ save.disabled=true; try{ await saveJournal(d,{memo:memo.value.trim().slice(0,3000)}); toast(T('메모를 저장했습니다')); }catch(e){ toast(errText(e)); } save.disabled=false; };
+    sec.append(h('label',{class:'f'},T('메모'),memo), h('div',{class:'actions'},add,save), pick,
+      h('span',{class:'muted',text:T('사진은 짐작할 수 없는 긴 주소로 저장되어 앱 안에서만 보입니다. 단원 화면에도 이날 기록이 보입니다. 마지막에 「활동 보고서 만들기」로 날짜별 일정·점검·메모·사진을 한 번에 인쇄하거나 PDF로 저장할 수 있습니다.')}));
   } else if(j.memo) sec.append(h('div',{class:'nmsg',text:j.memo}));
   return sec;
 }
@@ -721,7 +1158,7 @@ function openReport(){
     if(!st.length && !j && !ck.length) return '';
     return `<section><h2>${dayNo(d,days)}일째 · ${esc(dayLabel(d))}</h2>
       ${st.length?`<table><tr><th>시간</th><th>일정</th><th>장소</th><th>완료</th></tr>${st.map(s=>`<tr><td>${esc(s.time)}</td><td>${esc(s.title)} <small>${esc(s.type)}</small></td><td>${esc([s.place,s.city].filter(Boolean).join(' · '))}</td><td>${s.done?'○':''}</td></tr>`).join('')}</table>`:''}
-      ${ck.length?`<p class="m">인원 점검: ${ck.map(c=>esc(c.title)+' '+S.marks.filter(m=>m.check_id===c.id).length+'/'+S.members.length+'명').join(', ')}</p>`:''}
+      ${ck.length?`<p class="m">인원 점검: ${ck.map(c=>esc(c.title)+' '+S.marks.filter(m=>m.check_id===c.id).length+'/'+S.members.length+T('명')).join(', ')}</p>`:''}
       ${j&&j.memo?`<p>${esc(j.memo).replace(/\n/g,'<br>')}</p>`:''}
       ${j&&j.photos.length?`<div class="ph">${j.photos.map(p=>`<img src="${esc(photoUrl(p))}" alt="">`).join('')}</div>`:''}</section>`;
   }).join('');
@@ -734,120 +1171,120 @@ table{width:100%;border-collapse:collapse;font-size:10.5pt}th,td{border-bottom:1
 .m{color:#5B6472;font-size:10.5pt}.ph{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px}
 .sum{display:flex;gap:24px;color:#5B6472}.no{margin-top:24px}@media print{body{padding:0}.no{display:none}}</style></head><body>
 <header><b>KICKSTART UP</b><h1>${esc(t.name)} 활동 보고서</h1><div class="sum"><span>${esc([t.start_date&&dayLabel(t.start_date),t.end_date&&dayLabel(t.end_date)].filter(Boolean).join(' ~ '))}</span><span>단원 ${S.members.length}명</span><span>일정 ${S.stops.length}개</span><span>공지 ${S.notices.length}건</span></div></header>
-${dayHtml||'<p>아직 기록이 없습니다.</p>'}
+${dayHtml||T('<p>아직 기록이 없습니다.</p>')}
 <p class="no"><button onclick="print()" style="font-size:14pt;padding:10px 20px">인쇄 · PDF로 저장</button></p></body></html>`;
   const w=window.open(URL.createObjectURL(new Blob([html],{type:'text/html'})),'_blank');
-  if(!w) toast('새 창이 막혔습니다. 팝업 허용 뒤 다시 눌러 주세요');
+  if(!w) toast(T('새 창이 막혔습니다. 팝업 허용 뒤 다시 눌러 주세요'));
 }
 
 /* ---------- 비상 연락처 ---------- */
 const DEFAULT_EMERGENCY=[
-  {label:'유럽 긴급 신고 (경찰·구급차·소방)',number:'112',note:'EU 어디서나 무료'},
-  {label:'외교부 영사콜센터 (24시간)',number:'+82-2-3210-0404',note:'해외 사건·사고 상담'},
-  {label:'대한민국 대사관',number:'',note:'방문 나라 대사관 번호를 넣어 주세요'},
+  {label:T('유럽 긴급 신고 (경찰·구급차·소방)'),number:'112',note:T('EU 어디서나 무료')},
+  {label:T('외교부 영사콜센터 (24시간)'),number:'+82-2-3210-0404',note:T('해외 사건·사고 상담')},
+  {label:T('대한민국 대사관'),number:'',note:T('방문 나라 대사관 번호를 넣어 주세요')},
   {label:'숙소',number:'',note:''},
-  {label:'여행자 보험사',number:'',note:'증권 번호'}];
+  {label:T('여행자 보험사'),number:'',note:T('증권 번호')}];
 const emergencyList=()=>{ const e=S.tour&&Array.isArray(S.tour.emergency)?S.tour.emergency:[]; return e.length?e:DEFAULT_EMERGENCY; };
 function emergencySheet(){
   const rows=emergencyList();
-  const body=[h('span',{class:'muted',text:'번호를 누르면 전화가 걸립니다. 걸리지 않으면 번호를 길게 눌러 복사해 주세요.'})];
+  const body=[h('span',{class:'muted',text:T('번호를 누르면 전화가 걸립니다. 걸리지 않으면 번호를 길게 눌러 복사해 주세요.')})];
   body.push(h('div',{class:'stack'},rows.map(r=>h('div',{class:'ncard',style:'gap:4px'},
-    h('span',{class:'ttl',text:r.label||'연락처'}),
-    r.number?h('a',{class:'ntime',style:'font-size:28px;color:var(--red-ink);text-decoration:none;user-select:all',href:'tel:'+r.number.replace(/[^0-9+]/g,'')},r.number):h('span',{class:'muted',text:'번호가 아직 없습니다'}),
+    h('span',{class:'ttl',text:r.label||T('연락처')}),
+    r.number?h('a',{class:'ntime',style:'font-size:28px;color:var(--red-ink);text-decoration:none;user-select:all',href:'tel:'+r.number.replace(/[^0-9+]/g,'')},r.number):h('span',{class:'muted',text:T('번호가 아직 없습니다')}),
     r.note?h('span',{class:'muted',text:r.note}):null))));
-  if(L()) body.push(h('button',{class:'btn btn-ghost',type:'button',onclick:emergencyEdit},'연락처 고치기'));
-  openSheet('긴급 연락처',body);
+  if(L()) body.push(h('button',{class:'btn btn-ghost',type:'button',onclick:emergencyEdit},T('연락처 고치기')));
+  openSheet(T('긴급 연락처'),body);
 }
 function emergencyEdit(){
   const rows=emergencyList().map(r=>({...r}));
   const box=h('div',{class:'stack'});
   const paint=()=>{ box.replaceChildren(...rows.map((r,i)=>{
-    const l=h('input',{class:'in',value:r.label||'',placeholder:'이름 (예: 주체코 대사관)'}); l.oninput=()=>r.label=l.value;
+    const l=h('input',{class:'in',value:r.label||'',placeholder:T('이름 (예: 주체코 대사관)')}); l.oninput=()=>r.label=l.value;
     const n=h('input',{class:'in num',value:r.number||'',inputmode:'tel',placeholder:'+420 …'}); n.oninput=()=>r.number=n.value;
-    const t=h('input',{class:'in',value:r.note||'',placeholder:'메모'}); t.oninput=()=>r.note=t.value;
-    return h('div',{class:'panel',style:'padding:12px;gap:8px'},l,h('div',{class:'grid2'},n,t),h('button',{class:'linkbtn',type:'button',style:'align-self:flex-end;min-height:32px',onclick:()=>{ rows.splice(i,1); paint(); }},'빼기'));
+    const t=h('input',{class:'in',value:r.note||'',placeholder:T('메모')}); t.oninput=()=>r.note=t.value;
+    return h('div',{class:'panel',style:'padding:12px;gap:8px'},l,h('div',{class:'grid2'},n,t),h('button',{class:'linkbtn',type:'button',style:'align-self:flex-end;min-height:32px',onclick:()=>{ rows.splice(i,1); paint(); }},T('빼기')));
   })); };
   paint();
-  const save=h('button',{class:'btn btn-red',type:'button'},'저장');
+  const save=h('button',{class:'btn btn-red',type:'button'},T('저장'));
   save.onclick=async()=>{ const clean=rows.map(r=>({label:(r.label||'').trim().slice(0,60),number:(r.number||'').trim().slice(0,40),note:(r.note||'').trim().slice(0,100)})).filter(r=>r.label||r.number);
     const r=await S.sb.from('tour_tours').update({emergency:clean}).eq('id',S.tour.id).select().single();
-    if(r.error){ toast(errText(r.error)); return; } S.tour=r.data; closeSheet(); toast('긴급 연락처를 저장했습니다'); render(); };
-  openSheet('긴급 연락처 고치기',[box,h('button',{class:'btn btn-ghost',type:'button',onclick:()=>{ rows.push({label:'',number:'',note:''}); paint(); }},'+ 연락처 추가'),save]);
+    if(r.error){ toast(errText(r.error)); return; } S.tour=r.data; closeSheet(); toast(T('긴급 연락처를 저장했습니다')); render(); };
+  openSheet(T('긴급 연락처 고치기'),[box,h('button',{class:'btn btn-ghost',type:'button',onclick:()=>{ rows.push({label:'',number:'',note:''}); paint(); }},T('+ 연락처 추가')),save]);
 }
 
 /* ---------- 오늘의 한 줄 안내 ---------- */
 function briefCard(){
   const d=today(), j=S.journal.find(x=>x.date===d), text=(j&&j.brief)||'';
   if(!L()){ if(!text) return null;
-    return h('section',{class:'hero',style:'gap:6px'},h('div',{class:'row'},h('span',{text:'오늘의 안내 · '+dayLabel(d)})),h('div',{class:'nmsg',style:'font-size:17px;font-weight:700;color:#fff',text:text})); }
-  const inp=h('textarea',{class:'in',style:'min-height:64px',placeholder:'예: 오늘 12도·비 예보, 우산 챙기기 · 기상 7시 · 조식 7시 반 · 8시 로비 집합'}); inp.value=text;
-  const sv=h('button',{class:'btn btn-navy',type:'button'},'안내 올리기');
-  sv.onclick=async()=>{ sv.disabled=true; try{ await saveJournal(d,{brief:inp.value.trim().slice(0,300)}); toast('오늘의 안내를 올렸습니다'); render(); }catch(e){ toast(errText(e)); } sv.disabled=false; };
-  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:'오늘의 한 줄 안내'}),h('span',{class:'muted',text:dayLabel(d)})),
-    h('span',{class:'muted',text:'단원 공지 화면 맨 위에 크게 보입니다.'}),inp,sv);
+    return h('section',{class:'hero',style:'gap:6px'},h('div',{class:'row'},h('span',{text:T('오늘의 안내 · ')+dayLabel(d)})),h('div',{class:'nmsg',style:'font-size:17px;font-weight:700;color:#fff',text:text})); }
+  const inp=h('textarea',{class:'in',style:'min-height:64px',placeholder:T('예: 오늘 12도·비 예보, 우산 챙기기 · 기상 7시 · 조식 7시 반 · 8시 로비 집합')}); inp.value=text;
+  const sv=h('button',{class:'btn btn-navy',type:'button'},T('안내 올리기'));
+  sv.onclick=async()=>{ sv.disabled=true; try{ await saveJournal(d,{brief:inp.value.trim().slice(0,300)}); toast(T('오늘의 안내를 올렸습니다')); render(); }catch(e){ toast(errText(e)); } sv.disabled=false; };
+  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:T('오늘의 한 줄 안내')}),h('span',{class:'muted',text:dayLabel(d)})),
+    h('span',{class:'muted',text:T('단원 공지 화면 맨 위에 크게 보입니다.')}),inp,sv);
 }
 
 /* ---------- 단원 정보 (지도자) ---------- */
 const checklistItems=()=>Array.isArray(S.tour&&S.tour.checklist)?S.tour.checklist:[];
 const packedCount=m=>{ const items=checklistItems(), p=Array.isArray(m.packed)?m.packed:[]; return items.filter(x=>p.includes(x)).length; };
 function memberSheet(m){
-  const f={room:h('input',{class:'in',value:m.room||'',placeholder:'예: 305'}),seat:h('input',{class:'in',value:m.seat||'',placeholder:'예: 2호차 7번'}),
-    guardian:h('input',{class:'in',value:m.guardian||'',inputmode:'tel',placeholder:'보호자 이름·전화'}),passport:h('input',{class:'in num',value:m.passport_tail||'',placeholder:'끝 4자리',maxlength:'4'}),
-    health:h('textarea',{class:'in',placeholder:'알레르기, 복용 약, 주의할 점'})};
+  const f={room:h('input',{class:'in',value:m.room||'',placeholder:T('예: 305')}),seat:h('input',{class:'in',value:m.seat||'',placeholder:T('예: 2호차 7번')}),
+    guardian:h('input',{class:'in',value:m.guardian||'',inputmode:'tel',placeholder:T('보호자 이름·전화')}),passport:h('input',{class:'in num',value:m.passport_tail||'',placeholder:T('끝 4자리'),maxlength:'4'}),
+    health:h('textarea',{class:'in',placeholder:T('알레르기, 복용 약, 주의할 점')})};
   f.health.value=m.health||'';
   const items=checklistItems(), p=Array.isArray(m.packed)?m.packed:[];
-  const save=h('button',{class:'btn btn-red',type:'button'},'저장');
+  const save=h('button',{class:'btn btn-red',type:'button'},T('저장'));
   save.onclick=async()=>{ const r=await S.sb.from('tour_members').update({room:f.room.value.trim().slice(0,20),seat:f.seat.value.trim().slice(0,30),guardian:f.guardian.value.trim().slice(0,100),passport_tail:f.passport.value.replace(/\D/g,'').slice(0,4),health:f.health.value.trim().slice(0,500)}).eq('id',m.id);
-    if(r.error){ toast(errText(r.error)); return; } closeSheet(); toast('저장했습니다'); reloadSoon('members'); };
-  openSheet(m.name+' · '+m.grp,[
-    h('div',{class:'grid2'},h('label',{class:'f'},'방 번호',f.room),h('label',{class:'f'},'버스 좌석',f.seat)),
-    h('label',{class:'f'},'건강·안전 메모 (지도자와 본인만 봄)',f.health),
-    h('div',{class:'grid2'},h('label',{class:'f'},'보호자 연락처',f.guardian),h('label',{class:'f'},'여권 번호 끝 4자리',f.passport)),
-    items.length?h('div',{class:'panel',style:'padding:12px'},h('h2',{text:'준비물 '+packedCount(m)+' / '+items.length}),
-      h('div',{class:'who'},items.map(x=>h('span',{class:p.includes(x)?'':'no',text:(p.includes(x)?'챙김 · ':'아직 · ')+x})))):null,
+    if(r.error){ toast(errText(r.error)); return; } closeSheet(); toast(T('저장했습니다')); reloadSoon('members'); };
+  openSheet(m.name+' · '+T(m.grp),[
+    h('div',{class:'grid2'},h('label',{class:'f'},T('방 번호'),f.room),h('label',{class:'f'},T('버스 좌석'),f.seat)),
+    h('label',{class:'f'},T('건강·안전 메모 (지도자와 본인만 봄)'),f.health),
+    h('div',{class:'grid2'},h('label',{class:'f'},T('보호자 연락처'),f.guardian),h('label',{class:'f'},T('여권 번호 끝 4자리'),f.passport)),
+    items.length?h('div',{class:'panel',style:'padding:12px'},h('h2',{text:T('준비물 ')+packedCount(m)+' / '+items.length}),
+      h('div',{class:'who'},items.map(x=>h('span',{class:p.includes(x)?'':'no',text:(p.includes(x)?T('챙김 · '):T('아직 · '))+x})))):null,
     save]);
 }
 function roomsPanel(){
   const rooms={}; S.members.forEach(m=>{ const k=(m.room||'').trim(); if(k) (rooms[k]=rooms[k]||[]).push(m.name); });
   const keys=Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'ko',{numeric:true}));
   const none=S.members.filter(m=>!(m.room||'').trim()).length;
-  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:'방 배정'}),h('span',{class:'muted',text:none?'방 없음 '+none+'명':'모두 배정'})),
+  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:T('방 배정')}),h('span',{class:'muted',text:none?T('방 없음 ')+none+T('명'):T('모두 배정')})),
     keys.length? h('div',{class:'list'},keys.map(k=>h('div',{class:'row-item'},h('span',{class:'num',style:'font-weight:700;min-width:52px',text:k}),h('span',{class:'row-body',text:rooms[k].join(', ')}))))
-      : h('span',{class:'muted',text:'아래 단원 이름을 눌러 방 번호와 버스 좌석을 넣으면 여기에 모입니다.'}));
+      : h('span',{class:'muted',text:T('아래 단원 이름을 눌러 방 번호와 버스 좌석을 넣으면 여기에 모입니다.')}));
 }
 function checklistEditor(){
   const items=checklistItems(), mem=S.members.filter(m=>m.token);
-  const ta=h('textarea',{class:'in',style:'min-height:120px',placeholder:'한 줄에 하나씩\n여권\n도복·띠\n시범 소품\n충전기·보조배터리\n상비약'}); ta.value=items.join('\n');
-  const sv=h('button',{class:'btn btn-ghost',type:'button'},'준비물 목록 저장');
+  const ta=h('textarea',{class:'in',style:'min-height:120px',placeholder:T('한 줄에 하나씩\n여권\n도복·띠\n시범 소품\n충전기·보조배터리\n상비약')}); ta.value=items.join('\n');
+  const sv=h('button',{class:'btn btn-ghost',type:'button'},T('준비물 목록 저장'));
   sv.onclick=async()=>{ const list=[...new Set(ta.value.split('\n').map(x=>x.trim()).filter(Boolean))].slice(0,60);
-    const r=await S.sb.from('tour_tours').update({checklist:list}).eq('id',S.tour.id).select().single(); if(r.error){ toast(errText(r.error)); return; } S.tour=r.data; toast('준비물 목록을 저장했습니다'); render(); };
+    const r=await S.sb.from('tour_tours').update({checklist:list}).eq('id',S.tour.id).select().single(); if(r.error){ toast(errText(r.error)); return; } S.tour=r.data; toast(T('준비물 목록을 저장했습니다')); render(); };
   const done=items.length?mem.filter(m=>packedCount(m)===items.length).length:0;
-  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:'준비물 체크리스트'}),items.length?h('span',{class:'pill'+(done<mem.length?' warn':''),text:'다 챙김 '+done+' / '+mem.length}):null),
-    h('span',{class:'muted',text:'단원은 「내 정보」 칸에서 하나씩 체크합니다. 누가 덜 챙겼는지는 단원 이름 옆 숫자로 보입니다.'}),ta,sv);
+  return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:T('준비물 체크리스트')}),items.length?h('span',{class:'pill'+(done<mem.length?' warn':''),text:T('다 챙김 ')+done+' / '+mem.length}):null),
+    h('span',{class:'muted',text:T('단원은 「내 정보」 칸에서 하나씩 체크합니다. 누가 덜 챙겼는지는 단원 이름 옆 숫자로 보입니다.')}),ta,sv);
 }
 
 /* ---------- 단원: 내 정보 ---------- */
 function viewMe(){
   const wrap=h('div',{class:'stack'}), me=S.me, items=checklistItems(), packed=new Set(Array.isArray(me.packed)?me.packed:[]);
-  wrap.append(h('button',{class:'btn btn-red btn-big',type:'button',onclick:emergencySheet},'긴급 연락처'));
-  wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:'내 방'}),h('span',{text:me.seat?'버스 '+me.seat:'버스 좌석 미정'})),
-    h('div',{class:'big',style:'font-size:44px'},me.room||'미정'),
-    h('div',{class:'row'},h('span',{text:S.roommates.length?'함께 쓰는 친구: '+S.roommates.join(', '):(me.room?'혼자 쓰는 방':'지도자가 방을 정하면 여기에 보입니다')}))));
+  wrap.append(h('button',{class:'btn btn-red btn-big',type:'button',onclick:emergencySheet},T('긴급 연락처')));
+  wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:T('내 방')}),h('span',{text:me.seat?T('버스 ')+me.seat:T('버스 좌석 미정')})),
+    h('div',{class:'big',style:'font-size:44px'},me.room||T('미정')),
+    h('div',{class:'row'},h('span',{text:S.roommates.length?T('함께 쓰는 친구: ')+S.roommates.join(', '):(me.room?T('혼자 쓰는 방'):T('지도자가 방을 정하면 여기에 보입니다'))}))));
   if(items.length){
-    const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:'준비물'}),h('span',{class:'pill'+(packed.size<items.length?' warn':''),text:items.filter(x=>packed.has(x)).length+' / '+items.length})));
+    const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:T('준비물')}),h('span',{class:'pill'+(packed.size<items.length?' warn':''),text:items.filter(x=>packed.has(x)).length+' / '+items.length})));
     sec.append(h('div',{class:'list'},items.map(x=>{ const cb=h('input',{type:'checkbox','aria-label':x}); cb.checked=packed.has(x);
       cb.onchange=async()=>{ cb.checked?packed.add(x):packed.delete(x); const arr=items.filter(i=>packed.has(i)); me.packed=arr;
         const r=await S.sb.rpc('tour_set_packed',{p_token:S.token,p_packed:arr}); if(r.error){ toast(errText(r.error)); cb.checked=!cb.checked; } else render(); };
       return h('label',{class:'row-item'+(cb.checked?' done':''),style:'cursor:pointer'},cb,h('span',{class:'row-body'},h('span',{class:'ttl',text:x}))); })));
     wrap.append(sec);
   }
-  const health=h('textarea',{class:'in',placeholder:'알레르기, 복용 중인 약, 지도자가 알아야 할 점'}); health.value=me.health||'';
-  const guardian=h('input',{class:'in',value:me.guardian||'',inputmode:'tel',placeholder:'보호자 이름·전화번호'});
-  const sv=h('button',{class:'btn btn-ghost',type:'button'},'저장');
+  const health=h('textarea',{class:'in',placeholder:T('알레르기, 복용 중인 약, 지도자가 알아야 할 점')}); health.value=me.health||'';
+  const guardian=h('input',{class:'in',value:me.guardian||'',inputmode:'tel',placeholder:T('보호자 이름·전화번호')});
+  const sv=h('button',{class:'btn btn-ghost',type:'button'},T('저장'));
   sv.onclick=async()=>{ sv.disabled=true; const r=await S.sb.rpc('tour_update_me',{p_token:S.token,p_health:health.value.trim(),p_guardian:guardian.value.trim()}); sv.disabled=false;
-    if(r.error) toast(errText(r.error)); else { me.health=health.value.trim(); me.guardian=guardian.value.trim(); toast('지도자께 전달했습니다'); } };
-  wrap.append(h('section',{class:'panel'},h('h2',{text:'건강·안전 메모'}),h('span',{class:'muted',text:'지도자만 볼 수 있습니다. 아플 때 빨리 도와드리기 위해 씁니다.'}),
-    h('label',{class:'f'},'알레르기·약·주의할 점',health),h('label',{class:'f'},'보호자 연락처',guardian),sv));
+    if(r.error) toast(errText(r.error)); else { me.health=health.value.trim(); me.guardian=guardian.value.trim(); toast(T('지도자께 전달했습니다')); } };
+  wrap.append(h('section',{class:'panel'},h('h2',{text:T('건강·안전 메모')}),h('span',{class:'muted',text:T('지도자만 볼 수 있습니다. 아플 때 빨리 도와드리기 위해 씁니다.')}),
+    h('label',{class:'f'},T('알레르기·약·주의할 점'),health),h('label',{class:'f'},T('보호자 연락처'),guardian),sv));
   wrap.append(locationButton());
   return wrap;
 }
@@ -860,43 +1297,125 @@ function cueSheet(stop){
     const body=[h('span',{class:'muted',text:dayLabel(stop.date)+(stop.time?' '+stop.time:'')+(stop.place?' · '+stop.place:'')})];
     body.push(list.length? h('div',{class:'list'},list.map((c,i)=>h('div',{class:'row-item'},
       h('span',{class:'num',style:'font-size:22px;font-weight:700;min-width:30px;color:var(--red-ink)',text:String(i+1)}),
-      h('div',{class:'row-body'},h('span',{class:'ttl',text:c.title}),
-        c.music?h('span',{class:'muted',text:'음악 '+c.music}):null, c.who?h('span',{class:'muted',text:'출연 '+c.who}):null,
-        c.props?h('span',{class:'muted',text:'소품 '+c.props}):null, c.duration?h('span',{class:'muted',text:'시간 '+c.duration}):null),
+      h('div',{class:'row-body'},h('span',{class:'ttl',text:T(c.title)}),
+        c.music?h('span',{class:'muted',text:T('음악 ')+c.music}):null, c.who?h('span',{class:'muted',text:T('출연 ')+c.who}):null,
+        c.props?h('span',{class:'muted',text:T('소품 ')+c.props}):null, c.duration?h('span',{class:'muted',text:T('시간 ')+c.duration}):null),
       L()?h('div',{style:'display:flex;flex-direction:column;gap:4px'},
-        i>0?h('button',{class:'maplink',type:'button','aria-label':'위로',onclick:()=>move(i,-1)},'↑'):null,
-        i<list.length-1?h('button',{class:'maplink',type:'button','aria-label':'아래로',onclick:()=>move(i,1)},'↓'):null,
-        armButton(h('button',{class:'maplink',type:'button'},'빼기'),'뺌',async()=>{ const r=await S.sb.from('tour_cues').delete().eq('id',c.id); if(r.error) toast(errText(r.error)); else { S.cues=S.cues.filter(x=>x.id!==c.id); draw(); } })):null)))
-      : h('div',{class:'empty'},h('strong',{text:'순서표가 아직 없습니다'}),h('span',{text:L()?'아래에서 순서를 하나씩 넣어 주세요.':'지도자가 순서표를 만들면 여기에 보입니다.'})));
+        i>0?h('button',{class:'maplink',type:'button','aria-label':T('위로'),onclick:()=>move(i,-1)},'↑'):null,
+        i<list.length-1?h('button',{class:'maplink',type:'button','aria-label':T('아래로'),onclick:()=>move(i,1)},'↓'):null,
+        armButton(h('button',{class:'maplink',type:'button'},T('빼기')),T('뺌'),async()=>{ const r=await S.sb.from('tour_cues').delete().eq('id',c.id); if(r.error) toast(errText(r.error)); else { S.cues=S.cues.filter(x=>x.id!==c.id); draw(); } })):null)))
+      : h('div',{class:'empty'},h('strong',{text:T('순서표가 아직 없습니다')}),h('span',{text:L()?T('아래에서 순서를 하나씩 넣어 주세요.'):T('지도자가 순서표를 만들면 여기에 보입니다.')})));
     if(L()){
-      const f={title:h('input',{class:'in',placeholder:'예: 오프닝 품새'}),music:h('input',{class:'in',placeholder:'음악 파일 이름'}),who:h('input',{class:'in',placeholder:'출연 단원'}),props:h('input',{class:'in',placeholder:'격파 송판 20장 등'}),duration:h('input',{class:'in',placeholder:'예: 2분 30초'})};
-      const add=h('button',{class:'btn btn-red',type:'button'},'순서 추가');
-      add.onclick=async()=>{ if(!f.title.value.trim()){ toast('순서 이름을 넣어 주세요'); f.title.focus(); return; }
+      const f={title:h('input',{class:'in',placeholder:T('예: 오프닝 품새')}),music:h('input',{class:'in',placeholder:T('음악 파일 이름')}),who:h('input',{class:'in',placeholder:T('출연 단원')}),props:h('input',{class:'in',placeholder:T('격파 송판 20장 등')}),duration:h('input',{class:'in',placeholder:T('예: 2분 30초')})};
+      const add=h('button',{class:'btn btn-red',type:'button'},T('순서 추가'));
+      add.onclick=async()=>{ if(!f.title.value.trim()){ toast(T('순서 이름을 넣어 주세요')); f.title.focus(); return; }
         const seq=(list.length?Math.max(...list.map(c=>c.seq)):0)+1;
         const r=await S.sb.from('tour_cues').insert({tour_id:S.tour.id,stop_id:stop.id,seq,title:f.title.value.trim().slice(0,80),music:f.music.value.trim().slice(0,120),who:f.who.value.trim().slice(0,200),props:f.props.value.trim().slice(0,200),duration:f.duration.value.trim().slice(0,20)}).select().single();
         if(r.error){ toast(errText(r.error)); return; } S.cues.push(r.data); draw(); };
-      body.push(h('section',{class:'panel'},h('h2',{text:'순서 추가'}),h('label',{class:'f'},'순서 이름',f.title),h('div',{class:'grid2'},h('label',{class:'f'},'음악',f.music),h('label',{class:'f'},'시간',f.duration)),h('label',{class:'f'},'출연',f.who),h('label',{class:'f'},'소품',f.props),add));
+      body.push(h('section',{class:'panel'},h('h2',{text:T('순서 추가')}),h('label',{class:'f'},T('순서 이름'),f.title),h('div',{class:'grid2'},h('label',{class:'f'},T('음악'),f.music),h('label',{class:'f'},T('시간'),f.duration)),h('label',{class:'f'},T('출연'),f.who),h('label',{class:'f'},T('소품'),f.props),add));
     }
-    openSheet(stop.title+' 순서표',body);
+    openSheet(stop.title+T(' 순서표'),body);
   };
   const move=async(i,dir)=>{ const list=cues(), a=list[i], b=list[i+dir]; if(!a||!b) return;
     const sa=a.seq, sb=b.seq===a.seq?a.seq+dir:b.seq;
     const r1=await S.sb.from('tour_cues').update({seq:sb}).eq('id',a.id), r2=await S.sb.from('tour_cues').update({seq:sa}).eq('id',b.id);
-    if(r1.error||r2.error){ toast('순서를 바꾸지 못했습니다'); return; } a.seq=sb; b.seq=sa; draw(); };
+    if(r1.error||r2.error){ toast(T('순서를 바꾸지 못했습니다')); return; } a.seq=sb; b.seq=sa; draw(); };
   draw();
+}
+
+/* ---------- 현지어 배우기 (독일어·체코어·영어) ---------- */
+const PH=window.TOUR_PHRASES||{langs:{},cats:[],list:[]};
+S.learn={lang:'de',cat:'all',mode:'study',quiz:null};
+const learnLangs=()=>Object.keys(PH.langs).filter(k=>!(LANG==='en'&&k==='en'));
+const pool=lg=>PH.list.filter(p=>!p.only||p.only===lg);
+const meaningOf=p=>LANG==='en'?p.en:p.ko;
+const langName=k=>{ const l=PH.langs[k]||{}; return LANG==='en'?l.nameEn:l.name; };
+const langWhere=k=>{ const l=PH.langs[k]||{}; return LANG==='en'?l.whereEn:l.where; };
+function learned(lg){ try{ return new Set(JSON.parse(store.get('learn:'+lg)||'[]')); }catch(e){ return new Set(); } }
+function setLearned(lg,set){ store.set('learn:'+lg,JSON.stringify([...set])); }
+function sayLang(text,lg,rate){
+  if(!('speechSynthesis' in window)){ toast(T('이 휴대폰은 읽어 주기를 지원하지 않습니다')); return; }
+  stopSpeak();
+  const code=(PH.langs[lg]||{}).speech||'en-US';
+  const clean=String(text).replace(/\(a\)/g,'').replace(/…/g,'').replace(/\s*\/\s*/g,', ');
+  const u=new SpeechSynthesisUtterance(clean); u.lang=code; u.rate=rate||0.9;
+  const v=speechSynthesis.getVoices().find(x=>x.lang&&x.lang.replace('_','-').toLowerCase().startsWith(code.slice(0,2).toLowerCase()));
+  if(v) u.voice=v; else if(lg==='cs') toast(T('이 휴대폰에 체코어 목소리가 없어 다른 목소리로 읽을 수 있습니다. 한글 발음을 함께 보세요'));
+  speechSynthesis.speak(u);
+}
+function startQuiz(mode){
+  const lg=S.learn.lang, all=pool(lg).filter(p=>!/○○|…/.test(p[lg]));
+  const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const qs=shuffle(all.slice()).slice(0,10).map(p=>({p,opts:shuffle([p].concat(shuffle(all.filter(x=>x.id!==p.id)).slice(0,3)))}));
+  S.learn.quiz={mode,lang:lg,qs,i:0,score:0,picked:null};
+  if(mode==='listen') setTimeout(()=>sayLang(qs[0].p[lg],lg),300);
+}
+function viewLearn(){
+  const L2=S.learn, lg=L2.lang, wrap=h('div',{class:'stack'});
+  if(!learnLangs().includes(lg)) L2.lang=learnLangs()[0];
+  const list=pool(L2.lang), got=learned(L2.lang), best=Number(store.get('quizBest:'+L2.lang)||0);
+  wrap.append(h('div',{class:'chips',role:'group','aria-label':T('언어')},learnLangs().map(k=>h('button',{class:'chip',type:'button','aria-pressed':String(k===L2.lang),onclick:()=>{ L2.lang=k; L2.quiz=null; stopSpeak(); render(); }},langName(k)+' · '+langWhere(k)))));
+  wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:langName(L2.lang)+' · '+langWhere(L2.lang)}),h('span',{text:best?(T('퀴즈 최고 ')+best+' / 10'):T('퀴즈 아직 안 함')})),
+    h('div',{class:'big'},String(list.filter(p=>got.has(p.id)).length),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+list.length})),
+    h('div',{class:'row'},h('span',{text:T('외운 문장')}))));
+  wrap.append(h('div',{class:'catsel',role:'group','aria-label':T('공부 방식')},[['study',T('문장 공부')],['quiz',T('퀴즈')]].map(([k,l])=>h('button',{type:'button','aria-pressed':String(L2.mode===k),onclick:()=>{ L2.mode=k; if(k==='study') L2.quiz=null; stopSpeak(); render(); }},l))));
+  if(L2.mode==='quiz') { wrap.append(viewQuiz()); return wrap; }
+  wrap.append(h('div',{class:'chips',role:'group','aria-label':T('주제')},[['all',T('전체')]].concat(PH.cats.map(c=>[c.id,LANG==='en'?c.en:c.ko])).map(([k,l])=>h('button',{class:'chip',type:'button','aria-pressed':String(L2.cat===k),onclick:()=>{ L2.cat=k; render(); }},l))));
+  list.filter(p=>L2.cat==='all'||p.cat===L2.cat).forEach(p=>{
+    const has=got.has(p.id), pron=p[L2.lang+'P'];
+    wrap.append(h('article',{class:'ncard',style:'gap:6px'},
+      h('span',{class:'muted',style:'font-weight:700',text:meaningOf(p)}),
+      h('div',{class:'nplace',style:'font-size:21px',lang:L2.lang,text:p[L2.lang]}),
+      (LANG!=='en'&&pron)?h('span',{style:'color:var(--soft-ink);font-weight:600',text:'['+pron+']'}):null,
+      h('div',{style:'display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:4px'},
+        h('button',{class:'btn btn-navy',type:'button',style:'min-height:44px;font-size:13px',onclick:()=>sayLang(p[L2.lang],L2.lang,0.9)},T('듣기')),
+        h('button',{class:'btn btn-ghost',type:'button',style:'min-height:44px;font-size:13px',onclick:()=>sayLang(p[L2.lang],L2.lang,0.6)},T('천천히')),
+        h('button',{class:'btn '+(has?'btn-line':'btn-ghost'),type:'button','aria-pressed':String(has),style:'min-height:44px;font-size:13px',onclick:()=>{ has?got.delete(p.id):got.add(p.id); setLearned(L2.lang,got); render(); }},has?T('외웠어요'):T('외우기')))));
+  });
+  return wrap;
+}
+function viewQuiz(){
+  const L2=S.learn, q=L2.quiz;
+  if(!q||q.lang!==L2.lang){
+    return h('section',{class:'panel'},h('h2',{text:T('퀴즈 10문제')}),h('span',{class:'muted',text:T('뜻 보고 고르기는 우리말 뜻을 보고 현지어를, 듣고 고르기는 소리를 듣고 뜻을 고릅니다.')}),
+      h('div',{class:'actions'},h('button',{class:'btn btn-red',type:'button',onclick:()=>{ startQuiz('meaning'); render(); }},T('뜻 보고 고르기')),h('button',{class:'btn btn-navy',type:'button',onclick:()=>{ startQuiz('listen'); render(); }},T('듣고 고르기'))));
+  }
+  if(q.i>=q.qs.length){
+    const best=Math.max(q.score,Number(store.get('quizBest:'+q.lang)||0)); store.set('quizBest:'+q.lang,String(best));
+    return h('section',{class:'hero',style:'align-items:flex-start'},h('div',{class:'row'},h('span',{text:T('퀴즈 끝')}),h('span',{text:T('최고 ')+best+' / 10'})),
+      h('div',{class:'big'},String(q.score),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / 10'})),
+      h('div',{class:'row'},h('span',{text:q.score>=9?T('완벽합니다! 현지에서 자신 있게 써 보세요'):q.score>=6?T('잘했어요! 틀린 문장만 한 번 더 들어 보세요'):T('문장 공부에서 듣기를 몇 번 더 해 보세요')})),
+      h('button',{class:'hero-btn',type:'button',style:'min-height:44px',onclick:()=>{ startQuiz(q.mode); render(); }},T('다시 하기')));
+  }
+  const cur=q.qs[q.i], lg=q.lang, isListen=q.mode==='listen';
+  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('span',{class:'pill',text:(q.i+1)+' / '+q.qs.length}),h('span',{class:'muted',text:T('맞힌 문제 ')+q.score})));
+  if(isListen) sec.append(h('button',{class:'btn btn-navy btn-big',type:'button',onclick:()=>sayLang(cur.p[lg],lg,0.85)},T('다시 듣기')));
+  else sec.append(h('div',{class:'nplace',style:'font-size:22px;text-align:center;padding:10px 0',text:meaningOf(cur.p)}));
+  sec.append(h('div',{class:'stack',style:'gap:8px'},cur.opts.map(o=>{
+    const label=isListen?meaningOf(o):o[lg], right=o.id===cur.p.id, picked=q.picked===o.id;
+    let style='min-height:54px;justify-content:flex-start;text-align:left;font-size:15px';
+    if(q.picked){ if(right) style+=';background:var(--soft);border-color:var(--soft-ink);color:var(--soft-ink)'; else if(picked) style+=';background:var(--red-soft);border-color:var(--red-ink);color:var(--red-ink)'; }
+    return h('button',{class:'btn btn-ghost',type:'button',style,lang:isListen?null:lg,disabled:q.picked?true:null,onclick:()=>{ q.picked=o.id; if(right) q.score++; sayLang(cur.p[lg],lg,0.9); render(); }},label);
+  })));
+  if(q.picked){
+    const ok=q.picked===cur.p.id, pron=cur.p[lg+'P'];
+    sec.append(h('div',{class:'banner',style:ok?'background:var(--soft)':''},h('span',{text:(ok?T('정답! '):T('아쉬워요. 정답: '))+cur.p[lg]+((LANG!=='en'&&pron)?' ['+pron+']':'')})),
+      h('button',{class:'btn btn-red',type:'button',onclick:()=>{ q.i++; q.picked=null; if(isListen&&q.i<q.qs.length) setTimeout(()=>sayLang(q.qs[q.i].p[lg],lg),250); render(); }},q.i+1<q.qs.length?T('다음 문제'):T('결과 보기')));
+  }
+  return sec;
 }
 
 /* ---------- 인원 점검 ---------- */
 function locationButton(){
-  const b=h('button',{class:'btn btn-line',type:'button'},'길을 잃었어요 · 내 위치 보내기');
+  const b=h('button',{class:'btn btn-line',type:'button'},T('길을 잃었어요 · 내 위치 보내기'));
   b.onclick=()=>{
-    if(!navigator.geolocation){ toast('이 휴대폰에서는 위치를 보낼 수 없습니다'); return; }
-    b.disabled=true; b.textContent='위치 찾는 중…';
+    if(!navigator.geolocation){ toast(T('이 휴대폰에서는 위치를 보낼 수 없습니다')); return; }
+    b.disabled=true; b.textContent=T('위치 찾는 중…');
     navigator.geolocation.getCurrentPosition(async p=>{
       const r=await S.sb.rpc('tour_share_location',{p_token:S.token,p_lat:p.coords.latitude,p_lng:p.coords.longitude});
-      b.disabled=false; b.textContent='길을 잃었어요 · 내 위치 보내기';
-      if(r.error) toast(errText(r.error)); else toast('지도자께 내 위치를 보냈습니다. 그 자리에서 기다려 주세요');
-    },err=>{ b.disabled=false; b.textContent='길을 잃었어요 · 내 위치 보내기'; toast(err.code===1?'위치 사용을 허용해 주세요 (휴대폰 설정)':'위치를 찾지 못했습니다. 다시 눌러 주세요'); },{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
+      b.disabled=false; b.textContent=T('길을 잃었어요 · 내 위치 보내기');
+      if(r.error) toast(errText(r.error)); else toast(T('지도자께 내 위치를 보냈습니다. 그 자리에서 기다려 주세요'));
+    },err=>{ b.disabled=false; b.textContent=T('길을 잃었어요 · 내 위치 보내기'); toast(err.code===1?T('위치 사용을 허용해 주세요 (휴대폰 설정)'):T('위치를 찾지 못했습니다. 다시 눌러 주세요')); },{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
   };
   return b;
 }
@@ -905,10 +1424,10 @@ function viewCheck(){
   if(S.anon){
     if(oc){
       const done=S.marks.some(m=>m.check_id===oc.id&&m.member_id===S.me.id);
-      const b=h('button',{class:'btn btn-big '+(done?'btn-ghost':'btn-red'),type:'button',disabled:done||null},done?'도착 확인됨':'왔어요');
-      if(!done) b.onclick=async()=>{ b.disabled=true; const r=await S.sb.rpc('tour_check_in',{p_token:S.token,p_check:oc.id}); if(r.error){ b.disabled=false; toast(errText(r.error)); return; } toast('도착을 알렸습니다'); reloadSoon('check_marks'); };
-      wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:'지금 인원 점검 중'}),h('span',{text:hm(oc.created_at)+' 시작'})),h('div',{style:'font-size:26px;font-weight:900',text:oc.title})), b);
-    } else wrap.append(h('div',{class:'empty'},h('strong',{text:'지금 진행 중인 인원 점검이 없습니다'}),h('span',{text:'지도자가 점검을 시작하면 「왔어요」 버튼이 나옵니다.'})));
+      const b=h('button',{class:'btn btn-big '+(done?'btn-ghost':'btn-red'),type:'button',disabled:done||null},done?T('도착 확인됨'):T('왔어요'));
+      if(!done) b.onclick=async()=>{ b.disabled=true; const r=await S.sb.rpc('tour_check_in',{p_token:S.token,p_check:oc.id}); if(r.error){ b.disabled=false; toast(errText(r.error)); return; } toast(T('도착을 알렸습니다')); reloadSoon('check_marks'); };
+      wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:T('지금 인원 점검 중')}),h('span',{text:hm(oc.created_at)+T(' 시작')})),h('div',{style:'font-size:26px;font-weight:900',text:T(oc.title)})), b);
+    } else wrap.append(h('div',{class:'empty'},h('strong',{text:T('지금 진행 중인 인원 점검이 없습니다')}),h('span',{text:T('지도자가 점검을 시작하면 「왔어요」 버튼이 나옵니다.')})));
     wrap.append(locationButton());
     return wrap;
   }
@@ -917,29 +1436,29 @@ function viewCheck(){
     const marked=new Map(S.marks.filter(m=>m.check_id===oc.id).map(m=>[m.member_id,m]));
     const cnt=mem.filter(m=>marked.has(m.id)).length, missing=mem.filter(m=>!marked.has(m.id));
     wrap.append(h('section',{class:'hero'},
-      h('div',{class:'row'},h('span',{text:oc.title+' · '+hm(oc.created_at)+' 시작'}),h('span',{text:missing.length?'아직 '+missing.length+'명':'모두 왔습니다'})),
+      h('div',{class:'row'},h('span',{text:T(oc.title)+' · '+hm(oc.created_at)+T(' 시작')}),h('span',{text:missing.length?T('아직 ')+missing.length+T('명'):T('모두 왔습니다')})),
       h('div',{class:'big'},String(cnt),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+mem.length}))));
-    if(missing.length) wrap.append(h('section',{class:'panel'},h('h2',{text:'아직 안 온 단원'}),
+    if(missing.length) wrap.append(h('section',{class:'panel'},h('h2',{text:T('아직 안 온 단원')}),
       h('div',{class:'list',style:'padding:0 4px;background:none'},missing.map(m=>h('div',{class:'row-item'},
-        h('div',{class:'row-body'},h('span',{class:'ttl',text:m.name+' · '+m.grp}),h('span',{class:'muted',text:m.last_loc_at?'보낸 위치 '+ago(m.last_loc_at):(m.token?'보낸 위치 없음':'휴대폰 없이 추가한 단원')})),
-        m.last_lat!=null?h('a',{class:'maplink',href:posUrl(m.last_lat,m.last_lng),target:'_blank',rel:'noopener'},'위치 보기'):null)))));
-    wrap.append(h('section',{class:'panel'},h('h2',{text:'이름을 눌러 확인하기'}),h('span',{class:'muted',text:'단원이 「왔어요」를 누르면 저절로 바뀝니다. 직접 누르면 확인·취소됩니다.'}),
+        h('div',{class:'row-body'},h('span',{class:'ttl',text:m.name+' · '+T(m.grp)}),h('span',{class:'muted',text:m.last_loc_at?T('보낸 위치 ')+ago(m.last_loc_at):(m.token?T('보낸 위치 없음'):T('휴대폰 없이 추가한 단원'))})),
+        m.last_lat!=null?h('a',{class:'maplink',href:posUrl(m.last_lat,m.last_lng),target:'_blank',rel:'noopener'},T('위치 보기')):null)))));
+    wrap.append(h('section',{class:'panel'},h('h2',{text:T('이름을 눌러 확인하기')}),h('span',{class:'muted',text:T('단원이 「왔어요」를 누르면 저절로 바뀝니다. 직접 누르면 확인·취소됩니다.')}),
       h('div',{class:'grid-names'},mem.map(m=>{ const on=marked.has(m.id); return h('button',{class:'namebtn',type:'button','aria-pressed':String(on),onclick:async()=>{
         const r = on ? await S.sb.from('tour_check_marks').delete().eq('check_id',oc.id).eq('member_id',m.id)
                      : await S.sb.from('tour_check_marks').insert({check_id:oc.id,member_id:m.id,tour_id:S.tour.id,by_leader:true});
         if(r.error) toast(errText(r.error)); else reloadSoon('check_marks'); }},m.name); }))));
-    wrap.append(h('button',{class:'btn btn-navy',type:'button',onclick:async()=>{ const r=await S.sb.from('tour_checks').update({closed:true}).eq('id',oc.id); if(r.error) toast(errText(r.error)); else { toast('점검을 마쳤습니다'); reloadSoon('checks'); } }},'점검 마치기'));
+    wrap.append(h('button',{class:'btn btn-navy',type:'button',onclick:async()=>{ const r=await S.sb.from('tour_checks').update({closed:true}).eq('id',oc.id); if(r.error) toast(errText(r.error)); else { toast(T('점검을 마쳤습니다')); reloadSoon('checks'); } }},T('점검 마치기')));
   } else {
-    if(!mem.length) wrap.append(h('div',{class:'empty'},h('strong',{text:'아직 단원이 없습니다'}),h('span',{text:'「단원」 칸에서 초대 번호를 보내거나 직접 단원을 추가해 주세요.'})));
-    const title=h('input',{class:'in',id:'cTitle',placeholder:'예: 버스 탑승'});
-    const start=async t=>{ t=(t||'').trim(); if(!t){ toast('점검 이름을 넣어 주세요'); title.focus(); return; } const r=await S.sb.from('tour_checks').insert({tour_id:S.tour.id,title:t}); if(r.error) toast(errText(r.error)); else { toast(t+' 점검을 시작했습니다'); reloadSoon('checks'); } };
-    wrap.append(h('section',{class:'panel'},h('h2',{text:'인원 점검 시작'}),
-      h('div',{class:'catsel'},CHECK_PRESETS.map(p=>h('button',{type:'button',onclick:()=>start(p)},p))),
-      h('label',{class:'f'},'다른 이름으로',title), h('button',{class:'btn btn-red',type:'button',onclick:()=>start(title.value)},'점검 시작'),
-      h('span',{class:'muted',text:'시작하면 단원 휴대폰에 「왔어요」 버튼이 뜹니다.'})));
+    if(!mem.length) wrap.append(h('div',{class:'empty'},h('strong',{text:T('아직 단원이 없습니다')}),h('span',{text:T('「단원」 칸에서 초대 번호를 보내거나 직접 단원을 추가해 주세요.')})));
+    const title=h('input',{class:'in',id:'cTitle',placeholder:T('예: 버스 탑승')});
+    const start=async t=>{ t=(t||'').trim(); if(!t){ toast(T('점검 이름을 넣어 주세요')); title.focus(); return; } const r=await S.sb.from('tour_checks').insert({tour_id:S.tour.id,title:t}); if(r.error) toast(errText(r.error)); else { toast(t+T(' 점검을 시작했습니다')); reloadSoon('checks'); } };
+    wrap.append(h('section',{class:'panel'},h('h2',{text:T('인원 점검 시작')}),
+      h('div',{class:'catsel'},CHECK_PRESETS.map(p=>h('button',{type:'button',onclick:()=>start(T(p))},T(p)))),
+      h('label',{class:'f'},T('다른 이름으로'),title), h('button',{class:'btn btn-red',type:'button',onclick:()=>start(title.value)},T('점검 시작')),
+      h('span',{class:'muted',text:T('시작하면 단원 휴대폰에 「왔어요」 버튼이 뜹니다.')})));
   }
   const past=S.checks.filter(c=>c.closed).slice(0,10);
-  if(past.length) wrap.append(h('section',{class:'panel'},h('h2',{text:'지난 점검'}),h('div',{class:'list',style:'padding:0;background:none'},past.map(c=>{ const n=S.marks.filter(m=>m.check_id===c.id).length; return h('div',{class:'row-item'},h('div',{class:'row-body'},h('span',{class:'ttl',text:c.title}),h('span',{class:'muted',text:dayLabel(ymd(new Date(c.created_at)))+' '+hm(c.created_at)})),h('span',{class:'pill'+(n<mem.length?' warn':''),text:n+' / '+mem.length})); }))));
+  if(past.length) wrap.append(h('section',{class:'panel'},h('h2',{text:T('지난 점검')}),h('div',{class:'list',style:'padding:0;background:none'},past.map(c=>{ const n=S.marks.filter(m=>m.check_id===c.id).length; return h('div',{class:'row-item'},h('div',{class:'row-body'},h('span',{class:'ttl',text:T(c.title)}),h('span',{class:'muted',text:dayLabel(ymd(new Date(c.created_at)))+' '+hm(c.created_at)})),h('span',{class:'pill'+(n<mem.length?' warn':''),text:n+' / '+mem.length})); }))));
   return wrap;
 }
 
@@ -947,35 +1466,35 @@ function viewCheck(){
 function viewMembers(){
   const wrap=h('div',{class:'stack'});
   const link=location.origin+location.pathname+'?code='+S.tour.code;
-  let qrImg=null; try{ const q=qrcode(0,'M'); q.addData(link); q.make(); qrImg=h('img',{class:'qr',src:q.createDataURL(6,2),alt:'참가 QR 코드'}); }catch(e){}
-  const copy=h('button',{class:'btn btn-navy',type:'button'},'참가 링크 복사');
-  copy.onclick=async()=>{ try{ await navigator.clipboard.writeText('[원정 참가] '+S.tour.name+'\n'+link+'\n초대 번호: '+S.tour.code); toast('복사했습니다. 단톡방에 붙여 넣어 주세요'); }catch(e){ toast('복사가 안 됩니다. 아래 주소를 길게 눌러 복사해 주세요'); } };
-  const share=navigator.share? h('button',{class:'btn btn-ghost',type:'button',onclick:()=>navigator.share({title:S.tour.name,text:'[원정 참가] 초대 번호: '+S.tour.code,url:link}).catch(()=>{})},'공유하기') : null;
-  wrap.append(h('section',{class:'panel',style:'align-items:stretch'},h('h2',{text:'단원 초대'}),
-    h('span',{class:'muted',text:'단원은 이 링크를 열거나 QR을 찍고, 이름만 넣으면 참가합니다. 로그인은 필요 없습니다.'}),
-    h('div',{style:'text-align:center'},h('div',{class:'muted',text:'초대 번호'}),h('div',{class:'code',text:S.tour.code})),
+  let qrImg=null; try{ const q=qrcode(0,'M'); q.addData(link); q.make(); qrImg=h('img',{class:'qr',src:q.createDataURL(6,2),alt:T('참가 QR 코드')}); }catch(e){}
+  const copy=h('button',{class:'btn btn-navy',type:'button'},T('참가 링크 복사'));
+  copy.onclick=async()=>{ try{ await navigator.clipboard.writeText(T('[원정 참가] ')+S.tour.name+'\n'+link+T('\n초대 번호: ')+S.tour.code); toast(T('복사했습니다. 단톡방에 붙여 넣어 주세요')); }catch(e){ toast(T('복사가 안 됩니다. 아래 주소를 길게 눌러 복사해 주세요')); } };
+  const share=navigator.share? h('button',{class:'btn btn-ghost',type:'button',onclick:()=>navigator.share({title:S.tour.name,text:T('[원정 참가] 초대 번호: ')+S.tour.code,url:link}).catch(()=>{})},T('공유하기')) : null;
+  wrap.append(h('section',{class:'panel',style:'align-items:stretch'},h('h2',{text:T('단원 초대')}),
+    h('span',{class:'muted',text:T('단원은 이 링크를 열거나 QR을 찍고, 이름만 넣으면 참가합니다. 로그인은 필요 없습니다.')}),
+    h('div',{style:'text-align:center'},h('div',{class:'muted',text:T('초대 번호')}),h('div',{class:'code',text:S.tour.code})),
     qrImg, h('div',{class:'muted',style:'text-align:center;overflow-wrap:anywhere;user-select:all',text:link}),
     h('div',{class:'actions'},copy,share||h('span'))));
-  const name=h('input',{class:'in',placeholder:'휴대폰 없는 단원 이름'}), grp=h('select',{class:'in'},GROUPS.map(x=>h('option',{value:x},x)));
-  const add=h('button',{class:'btn btn-ghost',type:'button'},'직접 추가');
-  add.onclick=async()=>{ if(!name.value.trim()){ toast('이름을 넣어 주세요'); return; } const r=await S.sb.from('tour_members').insert({tour_id:S.tour.id,name:name.value.trim().slice(0,30),grp:grp.value,token:null}); if(r.error) toast(errText(r.error)); else { name.value=''; toast('단원을 추가했습니다'); reloadSoon('members'); } };
+  const name=h('input',{class:'in',placeholder:T('휴대폰 없는 단원 이름')}), grp=h('select',{class:'in'},GROUPS.map(x=>h('option',{value:x},T(x))));
+  const add=h('button',{class:'btn btn-ghost',type:'button'},T('직접 추가'));
+  add.onclick=async()=>{ if(!name.value.trim()){ toast(T('이름을 넣어 주세요')); return; } const r=await S.sb.from('tour_members').insert({tour_id:S.tour.id,name:name.value.trim().slice(0,30),grp:grp.value,token:null}); if(r.error) toast(errText(r.error)); else { name.value=''; toast(T('단원을 추가했습니다')); reloadSoon('members'); } };
   const mem=[...S.members].sort((a,b)=>a.name.localeCompare(b.name,'ko'));
-  wrap.append(h('section',{class:'panel'},h('h2',{text:'단원 '+mem.length+'명'}),
+  wrap.append(h('section',{class:'panel'},h('h2',{text:T('단원 ')+mem.length+T('명')}),
     mem.length? h('div',{class:'list',style:'padding:0;background:none'},mem.map(m=>h('div',{class:'row-item'},
-      h('button',{class:'row-body',type:'button',onclick:()=>memberSheet(m)},h('span',{class:'ttl'},m.name+' · '+m.grp,m.health?h('span',{class:'tag show',style:'margin-left:6px',text:'건강 메모'}):null),
-        h('span',{class:'muted',text:[m.room?m.room+'호':'',m.seat?'버스 '+m.seat:'',checklistItems().length&&m.token?'준비물 '+packedCount(m)+'/'+checklistItems().length:''].filter(Boolean).join(' · ')||'눌러서 방·좌석·건강 메모 넣기'}),
-        h('span',{class:'muted',text:m.token?(hm(m.joined_at)+' 참가'+(m.last_loc_at?' · 위치 '+ago(m.last_loc_at):'')):'휴대폰 없이 추가'})),
-      m.last_lat!=null?h('a',{class:'maplink',href:posUrl(m.last_lat,m.last_lng),target:'_blank',rel:'noopener'},'위치'):null,
-      armButton(h('button',{class:'maplink',type:'button'},'빼기'),'뺍니다',async()=>{ const r=await S.sb.from('tour_members').delete().eq('id',m.id); if(r.error) toast(errText(r.error)); else reloadSoon('members'); }))))
-      : h('span',{class:'muted',text:'아직 참가한 단원이 없습니다.'}),
+      h('button',{class:'row-body',type:'button',onclick:()=>memberSheet(m)},h('span',{class:'ttl'},m.name+' · '+T(m.grp),m.health?h('span',{class:'tag show',style:'margin-left:6px',text:T('건강 메모')}):null),
+        h('span',{class:'muted',text:[m.room?m.room+T('호'):'',m.seat?T('버스 ')+m.seat:'',checklistItems().length&&m.token?T('준비물 ')+packedCount(m)+'/'+checklistItems().length:''].filter(Boolean).join(' · ')||T('눌러서 방·좌석·건강 메모 넣기')}),
+        h('span',{class:'muted',text:m.token?(hm(m.joined_at)+T(' 참가')+(m.last_loc_at?T(' · 위치 ')+ago(m.last_loc_at):'')):T('휴대폰 없이 추가')})),
+      m.last_lat!=null?h('a',{class:'maplink',href:posUrl(m.last_lat,m.last_lng),target:'_blank',rel:'noopener'},T('위치')):null,
+      armButton(h('button',{class:'maplink',type:'button'},T('빼기')),T('뺍니다'),async()=>{ const r=await S.sb.from('tour_members').delete().eq('id',m.id); if(r.error) toast(errText(r.error)); else reloadSoon('members'); }))))
+      : h('span',{class:'muted',text:T('아직 참가한 단원이 없습니다.')}),
     h('div',{class:'grid2'},name,grp), add));
   const tn=h('input',{class:'in',value:S.tour.name}), ts=h('input',{class:'in',type:'date',value:S.tour.start_date||''}), te=h('input',{class:'in',type:'date',value:S.tour.end_date||''});
-  const sv=h('button',{class:'btn btn-ghost',type:'button'},'원정 정보 저장');
-  sv.onclick=async()=>{ if(!tn.value.trim()){ toast('원정 이름을 넣어 주세요'); return; } if(ts.value&&te.value&&te.value<ts.value){ toast('돌아오는 날이 출발일보다 빠릅니다'); return; }
+  const sv=h('button',{class:'btn btn-ghost',type:'button'},T('원정 정보 저장'));
+  sv.onclick=async()=>{ if(!tn.value.trim()){ toast(T('원정 이름을 넣어 주세요')); return; } if(ts.value&&te.value&&te.value<ts.value){ toast(T('돌아오는 날이 출발일보다 빠릅니다')); return; }
     const r=await S.sb.from('tour_tours').update({name:tn.value.trim(),start_date:ts.value||null,end_date:te.value||null}).eq('id',S.tour.id).select().single();
-    if(r.error) toast(errText(r.error)); else { S.tour=r.data; toast('저장했습니다'); render(); } };
+    if(r.error) toast(errText(r.error)); else { S.tour=r.data; toast(T('저장했습니다')); render(); } };
   wrap.append(roomsPanel(), checklistEditor());
-  wrap.append(h('section',{class:'panel'},h('h2',{text:'원정 정보'}),h('label',{class:'f'},'원정 이름',tn),h('div',{class:'grid2'},h('label',{class:'f'},'출발일',ts),h('label',{class:'f'},'돌아오는 날',te)),sv));
+  wrap.append(h('section',{class:'panel'},h('h2',{text:T('원정 정보')}),h('label',{class:'f'},T('원정 이름'),tn),h('div',{class:'grid2'},h('label',{class:'f'},T('출발일'),ts),h('label',{class:'f'},T('돌아오는 날'),te)),sv));
   return wrap;
 }
 
@@ -985,9 +1504,9 @@ const standalone=()=>window.matchMedia('(display-mode: standalone)').matches||na
 function showInstall(){
   const bar=$('installBar'); if(standalone()||store.get('installHidden')){ bar.hidden=true; return; }
   const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
-  const close=h('button',{class:'linkbtn',type:'button',onclick:()=>{ store.set('installHidden','1'); bar.hidden=true; }},'닫기');
-  if(deferredPrompt) bar.replaceChildren(h('span',{text:'홈 화면에 설치하면 앱처럼 바로 열립니다.'}),h('button',{class:'btn btn-navy',type:'button',style:'min-height:40px',onclick:async()=>{ deferredPrompt.prompt(); await deferredPrompt.userChoice.catch(()=>{}); deferredPrompt=null; bar.hidden=true; }},'설치'),close);
-  else if(ios) bar.replaceChildren(h('span',{text:'아래 공유 버튼(네모에 화살표) → 「홈 화면에 추가」를 누르면 앱처럼 설치됩니다.'}),close);
+  const close=h('button',{class:'linkbtn',type:'button',onclick:()=>{ store.set('installHidden','1'); bar.hidden=true; }},T('닫기'));
+  if(deferredPrompt) bar.replaceChildren(h('span',{text:T('홈 화면에 설치하면 앱처럼 바로 열립니다.')}),h('button',{class:'btn btn-navy',type:'button',style:'min-height:40px',onclick:async()=>{ deferredPrompt.prompt(); await deferredPrompt.userChoice.catch(()=>{}); deferredPrompt=null; bar.hidden=true; }},T('설치')),close);
+  else if(ios) bar.replaceChildren(h('span',{text:T('아래 공유 버튼(네모에 화살표) → 「홈 화면에 추가」를 누르면 앱처럼 설치됩니다.')}),close);
   else { bar.hidden=true; return; }
   bar.hidden=false;
 }
@@ -1019,7 +1538,7 @@ async function route(){
 if(configured){
   S.sb=supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 }
-route().catch(err=>main(h('div',{class:'empty'},h('strong',{text:'열지 못했습니다'}),h('span',{text:errText(err)}))));
+route().catch(err=>main(h('div',{class:'empty'},h('strong',{text:T('열지 못했습니다')}),h('span',{text:errText(err)}))));
 showInstall();
 })();
 </script>
