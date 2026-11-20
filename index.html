@@ -178,8 +178,9 @@ const CHECK_PRESETS=['버스 탑승','호텔 출발','공연장 집합','식당 
 
 /* ---------- 상태 ---------- */
 const S={ sb:null, session:null, uid:null, anon:false, tours:[], tour:null, me:null,
-  members:[], stops:[], notices:[], acks:[], checks:[], marks:[], tab:null, day:null, channel:null, knownNotices:null, offline:false };
+  members:[], stops:[], notices:[], acks:[], checks:[], marks:[], guides:[], rate:1, knownLive:null, tab:null, day:null, channel:null, knownNotices:null, offline:false };
 const cfg=window.TOUR_CONFIG||{};
+{ const r=Number(store.get('ttsRate')); if(r>0) S.rate=r; }
 const configured = cfg.SUPABASE_URL && !/YOUR-PROJECT/.test(cfg.SUPABASE_URL) && cfg.SUPABASE_ANON_KEY && !/YOUR-ANON-KEY/.test(cfg.SUPABASE_ANON_KEY);
 
 function main(...nodes){ const m=$('main'); m.replaceChildren(...nodes); }
@@ -304,12 +305,13 @@ async function openTour(t,tab){
   await loadAll(); subscribe(); render();
 }
 // 지도자 화면: 표 이름 ↔ 화면 상태 이름
-const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks'};
+const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides'};
 async function loadTable(tb){
   const id=S.tour.id; let q=S.sb.from(TABLES[tb]).select('*').eq('tour_id',id);
   if(tb==='notices'||tb==='checks') q=q.order('created_at',{ascending:false}).limit(60);
   if(tb==='stops') q=q.order('date').order('time');
-  const r=await q; if(r.error) throw r.error;
+  const r=await q;
+  if(r.error){ if(tb==='guides'){ S.guides=[]; return; } throw r.error; }
   const key = tb==='check_marks'?'marks':tb; S[key]=r.data||[];
 }
 // 단원 화면: 열쇠(token) 하나로 내 원정 내용 한 번에 받기
@@ -317,18 +319,18 @@ async function loadStudent(){
   const r=await S.sb.rpc('tour_student_state',{p_token:S.token});
   if(r.error) throw r.error;
   const d=r.data; S.tour=d.tour; S.me=d.me; S.members=[d.me];
-  S.stops=d.stops||[]; S.notices=d.notices||[]; S.acks=d.acks||[]; S.checks=d.checks||[]; S.marks=d.marks||[];
+  S.stops=d.stops||[]; S.notices=d.notices||[]; S.acks=d.acks||[]; S.checks=d.checks||[]; S.marks=d.marks||[]; S.guides=d.guides||[];
 }
 async function loadAll(){
   const ck='cache:'+(S.anon?'student':S.tour.id);
   try{
     if(S.anon) await loadStudent(); else await Promise.all(Object.keys(TABLES).map(loadTable));
     S.offline=false; $('netBar').hidden=true;
-    store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks}));
+    store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks,guides:S.guides}));
   }catch(err){
     if(/bad_token/.test(String(err&&err.message))){ store.set('tourToken',null); S.token=null; S.anon=false; S.tour=null; toast('원정에서 빠졌습니다. 다시 참가해 주세요'); screenJoin(''); throw err; }
     const c=store.get(ck);
-    if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks}); if(S.anon) S.me=d.me; }catch(e){} }
+    if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks,guides:d.guides||[]}); if(S.anon) S.me=d.me; }catch(e){} }
     else if(!S.tour) throw err;
     S.offline=true; const nb=$('netBar'); nb.replaceChildren(h('span',{text:'인터넷이 끊겨 마지막으로 받은 내용을 보여 줍니다. 연결되면 저절로 새로 고칩니다.'})); nb.hidden=false;
   }
@@ -353,6 +355,9 @@ function notifyNew(){
     if(S.anon){ S.tab='notices'; try{ navigator.vibrate&&navigator.vibrate([200,100,200]); }catch(e){} }
   }
   S.knownNotices=ids;
+  const lg=liveGuide();
+  if(S.knownLive!==null && lg && lg.id+lg.live_at!==S.knownLive && S.anon){ toast('지금 해설: '+lg.title); S.tab='guide'; try{ navigator.vibrate&&navigator.vibrate(200); }catch(e){} }
+  S.knownLive = lg ? lg.id+lg.live_at : '';
 }
 const refresh=()=>{ if(S.tour) loadAll().then(()=>{ notifyNew(); render(); }).catch(()=>{}); };
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') refresh(); });
@@ -371,20 +376,21 @@ const dayNo=(d,days)=>{ const base=(isDate(S.tour.start_date)&&S.tour.start_date
 const L=()=>!S.anon;
 const seenBy=nid=>new Set(S.acks.filter(a=>a.notice_id===nid).map(a=>a.member_id));
 const openCheck=()=>S.checks.find(c=>!c.closed)||null;
+const liveGuide=()=>S.guides.filter(g=>g.live_at&&Date.now()-new Date(g.live_at)<15*60000).sort((a,b)=>new Date(b.live_at)-new Date(a.live_at))[0]||null;
 
 function render(){
   if(!S.tour) return;
   if(S.anon && !S.me){ screenJoin(''); return; }
   topRight(L()? h('button',{class:'linkbtn',type:'button',onclick:()=>{ closeTour(); screenTours(); }},'원정 목록')
               : armButton(h('button',{class:'linkbtn',type:'button'},'원정 나가기'),'나갑니다',leaveTour));
-  const tabs = L()? [['notices','공지'],['schedule','일정'],['check','인원 점검'],['members','단원']] : [['notices','공지'],['schedule','일정'],['check','점검']];
+  const tabs = L()? [['notices','공지'],['schedule','일정'],['guide','가이드'],['check','점검'],['members','단원']] : [['notices','공지'],['schedule','일정'],['guide','가이드'],['check','점검']];
   if(!tabs.some(t=>t[0]===S.tab)) S.tab='notices';
   const unseen = S.anon ? S.notices.filter(n=>!S.acks.some(a=>a.notice_id===n.id&&a.member_id===S.me.id)).length : 0;
   const oc=openCheck(), myMarked = S.anon&&oc ? S.marks.some(m=>m.check_id===oc.id&&m.member_id===S.me.id) : true;
   const tabBar=h('div',{class:'tabs',role:'tablist','aria-label':'화면'}, tabs.map(([k,label])=>h('button',{class:'tab',role:'tab',type:'button','aria-selected':String(S.tab===k),onclick:()=>{ S.tab=k; render(); window.scrollTo(0,0); }},
     label, (k==='notices'&&unseen)?h('span',{class:'badge',text:String(unseen)}):null, (k==='check'&&S.anon&&oc&&!myMarked)?h('span',{class:'badge',text:'!'}):null)));
   const head=h('div',{},h('div',{class:'sub',text:L()? '지도자 · 초대 번호 '+S.tour.code : S.me.name+' · '+S.me.grp}),h('h1',{text:S.tour.name}));
-  const body = S.tab==='schedule'?viewSchedule() : S.tab==='check'?viewCheck() : S.tab==='members'?viewMembers() : viewNotices();
+  const body = S.tab==='schedule'?viewSchedule() : S.tab==='guide'?viewGuide() : S.tab==='check'?viewCheck() : S.tab==='members'?viewMembers() : viewNotices();
   main(head, tabBar, body);
 }
 function closeTour(){ if(S.channel){ S.sb.removeChannel(S.channel); S.channel=null; } S.tour=null; store.set('tourId',null); }
@@ -475,7 +481,9 @@ function viewSchedule(){
         has?h('span',{class:'muted',text:[s.place,s.city].filter(Boolean).join(' · ')}):null,
         s.contact?h('span',{class:'muted',text:'연락처 '+s.contact}):null,
         s.memo?h('span',{class:'muted',text:s.memo}):null),
-      has?h('a',{class:'maplink',href:dirUrl([s.place,s.city].filter(Boolean).join(', ')),target:'_blank',rel:'noopener'},'길 찾기'):null);
+      h('div',{style:'display:flex;flex-direction:column;gap:6px;align-items:flex-end'},
+        has?h('a',{class:'maplink',href:dirUrl([s.place,s.city].filter(Boolean).join(', ')),target:'_blank',rel:'noopener'},'길 찾기'):null,
+        S.guides.some(g=>g.stop_id===s.id)?h('button',{class:'maplink',type:'button',onclick:()=>{ S.tab='guide'; S.openGuide=S.guides.find(g=>g.stop_id===s.id).id; render(); window.scrollTo(0,0); }},'해설 듣기'):null));
   })));
   return wrap;
 }
@@ -502,6 +510,104 @@ function stopSheet(s){
     h('label',{class:'f'},'일정 이름',f.title), h('label',{class:'f'},'장소 (구글 지도에서 찾을 이름이나 주소)',f.place),
     h('div',{class:'grid2'},h('label',{class:'f'},'도시',f.city),h('label',{class:'f'},'현지 담당자 연락처',f.contact)),
     h('label',{class:'f'},'메모',f.memo), acts]);
+}
+
+/* ---------- AI 해설 가이드 (휴대폰 음성으로 읽기) ---------- */
+const TTS={ playing:null, queue:[] };
+function koVoice(){
+  if(!('speechSynthesis' in window)) return null;
+  const vs=speechSynthesis.getVoices().filter(v=>/^ko/i.test(v.lang));
+  return vs.find(v=>/natural|google|yuna|sunhi|heami|online/i.test(v.name))||vs[0]||null;
+}
+if('speechSynthesis' in window) speechSynthesis.onvoiceschanged=()=>{};
+function stopSpeak(){ try{ speechSynthesis.cancel(); }catch(e){} TTS.playing=null; TTS.queue=[]; }
+function speak(g){
+  if(!('speechSynthesis' in window)){ toast('이 휴대폰은 읽어 주기를 지원하지 않습니다'); return; }
+  stopSpeak();
+  const parts=String(g.script||'').replace(/\s+/g,' ').split(/(?<=[.!?。…])\s+|(?<=다\.)\s*/).map(x=>x.trim()).filter(Boolean);
+  const chunks=[]; let cur='';
+  parts.forEach(p=>{ if((cur+' '+p).length>180){ if(cur) chunks.push(cur); cur=p; } else cur=cur?cur+' '+p:p; }); if(cur) chunks.push(cur);
+  if(!chunks.length){ toast('해설 글이 비어 있습니다'); return; }
+  TTS.playing=g.id; TTS.queue=chunks.slice();
+  const v=koVoice();
+  const next=()=>{
+    if(TTS.playing!==g.id) return;
+    const t=TTS.queue.shift(); if(!t){ TTS.playing=null; render(); return; }
+    const u=new SpeechSynthesisUtterance(t); u.lang='ko-KR'; if(v) u.voice=v; u.rate=S.rate; u.onend=next; u.onerror=()=>{ TTS.playing=null; render(); };
+    speechSynthesis.speak(u);
+  };
+  next(); render();
+}
+async function wikiIntro(q){
+  const base='https://ko.wikipedia.org/w/api.php?format=json&origin=*&';
+  const s=await fetch(base+'action=query&list=search&srlimit=1&srsearch='+encodeURIComponent(q)).then(r=>r.json());
+  const hit=s&&s.query&&s.query.search&&s.query.search[0]; if(!hit) return null;
+  const e=await fetch(base+'action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&titles='+encodeURIComponent(hit.title)).then(r=>r.json());
+  const pg=Object.values((e&&e.query&&e.query.pages)||{})[0]; if(!pg||!pg.extract) return null;
+  return {title:pg.title, text:pg.extract.replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim(), url:'https://ko.wikipedia.org/wiki/'+encodeURIComponent(pg.title.replace(/ /g,'_'))};
+}
+function guideSheet(g){
+  const title=h('input',{class:'in',value:g.title||'',placeholder:'예: 프라하성'});
+  const stopSel=h('select',{class:'in'},h('option',{value:''},'연결 안 함'),
+    [...S.stops].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).map(s=>h('option',{value:s.id,selected:g.stop_id===s.id||null},dayLabel(s.date)+' · '+s.title)));
+  const script=h('textarea',{class:'in',style:'min-height:220px;line-height:1.7',placeholder:'해설 글을 쓰거나, 아래 단추로 위키백과 설명을 가져오세요.'}); script.value=g.script||'';
+  const src=h('span',{class:'muted',text:g.source_url?'출처: 위키백과':''}); let srcUrl=g.source_url||'';
+  const count=h('span',{class:'muted'}); const upd=()=>{ const n=script.value.length; count.textContent=n+'자 · 약 '+Math.max(1,Math.round(n/280))+'분'; }; script.oninput=upd; upd();
+  const wiki=h('button',{class:'btn btn-navy',type:'button'},'위키백과에서 가져오기');
+  wiki.onclick=async()=>{ const q=title.value.trim(); if(!q){ toast('장소 이름을 먼저 넣어 주세요'); title.focus(); return; }
+    wiki.disabled=true; wiki.textContent='찾는 중…';
+    try{ const w=await wikiIntro(q); if(!w){ toast('위키백과에서 찾지 못했습니다. 다른 이름(영어·현지어)으로 해 보세요'); return; }
+      script.value='여러분, 지금 우리가 와 있는 곳은 '+w.title+'입니다. '+w.text.slice(0,1400); srcUrl=w.url; src.textContent='출처: 위키백과 「'+w.title+'」'; upd(); toast('가져왔습니다. 읽기 쉽게 고쳐 주세요'); }
+    catch(e){ toast('인터넷 연결을 확인해 주세요'); } finally{ wiki.disabled=false; wiki.textContent='위키백과에서 가져오기'; } };
+  const ask=h('button',{class:'btn btn-line',type:'button'},'Claude에게 부탁할 글 복사');
+  ask.onclick=async()=>{ const q=title.value.trim()||'이 장소';
+    const prompt='태권도 시범단 중고등학생 단원들에게 이어폰으로 들려줄 「'+q+'」 관광 해설을 써 줘. 2~3분 분량(700자 안팎), 쉬운 존댓말, 소리 내어 읽기 좋게 짧은 문장으로. 역사 한두 가지, 꼭 볼 것, 재미있는 이야기 하나, 사진 찍기 좋은 곳을 넣어 줘. 해설 글만 써 줘.';
+    try{ await navigator.clipboard.writeText(prompt); toast('복사했습니다. Claude에 붙여 넣고, 받은 해설을 위 칸에 붙여 넣으세요'); }catch(e){ script.value=prompt; upd(); toast('복사가 안 돼서 칸에 넣었습니다. 길게 눌러 복사해 주세요'); } };
+  const prev=h('button',{class:'btn btn-ghost',type:'button',onclick:()=>speak({id:'preview',script:script.value})},'미리 듣기');
+  const save=h('button',{class:'btn btn-red wide',type:'button'},'해설 저장');
+  save.onclick=async()=>{ if(!title.value.trim()){ toast('장소 이름을 넣어 주세요'); title.focus(); return; } if(!script.value.trim()){ toast('해설 글을 넣어 주세요'); script.focus(); return; }
+    const row={tour_id:S.tour.id,title:title.value.trim().slice(0,60),script:script.value.trim().slice(0,6000),stop_id:stopSel.value||null,source_url:srcUrl||''};
+    save.disabled=true; const r=g.id? await S.sb.from('tour_guides').update(row).eq('id',g.id) : await S.sb.from('tour_guides').insert(row); save.disabled=false;
+    if(r.error){ toast(errText(r.error)); return; } stopSpeak(); closeSheet(); toast('해설을 저장했습니다'); reloadSoon('guides'); };
+  const acts=h('div',{class:'actions'},prev,h('span'),save);
+  if(g.id) acts.append(armButton(h('button',{class:'btn btn-ghost wide',type:'button'},'이 해설 삭제'),'삭제됩니다',async()=>{ const r=await S.sb.from('tour_guides').delete().eq('id',g.id); if(r.error) toast(errText(r.error)); else { stopSpeak(); closeSheet(); toast('해설을 삭제했습니다'); reloadSoon('guides'); } }));
+  openSheet(g.id?'해설 고치기':'해설 만들기',[h('label',{class:'f'},'장소 이름',title),h('label',{class:'f'},'연결할 일정',stopSel),
+    h('div',{class:'actions'},wiki,ask), h('label',{class:'f'},'해설 글',script), h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},count,src), acts]);
+}
+function rateChips(){
+  return h('div',{class:'catsel',role:'group','aria-label':'읽는 빠르기'},[['0.85','천천히'],['1','보통'],['1.2','빠르게']].map(([v,l])=>h('button',{type:'button','aria-pressed':String(S.rate===Number(v)),onclick:()=>{ S.rate=Number(v); store.set('ttsRate',v); render(); }},l)));
+}
+function viewGuide(){
+  const wrap=h('div',{class:'stack'}), lg=liveGuide();
+  if(!('speechSynthesis' in window)) wrap.append(h('div',{class:'banner'},h('span',{text:'이 휴대폰 브라우저는 읽어 주기를 지원하지 않습니다. 해설 글을 읽어 주세요.'})));
+  if(lg){
+    const on=TTS.playing===lg.id;
+    wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:'지금 해설'}),h('span',{text:hm(lg.live_at)+' 시작'})),
+      h('div',{style:'font-size:26px;font-weight:900',text:lg.title}),
+      h('button',{class:'btn btn-big '+(on?'btn-ghost':'btn-red'),type:'button',onclick:()=>on?(stopSpeak(),render()):speak(lg)},on?'멈추기':'이어폰 끼고 듣기')));
+  }
+  if(L()) wrap.append(h('button',{class:'btn btn-red',type:'button',onclick:()=>guideSheet({stop_id:null})},'해설 만들기'));
+  wrap.append(h('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap'},h('span',{class:'muted',text:'읽는 빠르기'}),rateChips()));
+  if(!S.guides.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:'아직 해설이 없습니다'}),h('span',{text:L()?'「해설 만들기」에서 장소 이름을 넣고 위키백과 설명을 가져오거나, Claude에게 해설을 부탁해 붙여 넣으세요.':'지도자가 해설을 만들면 여기에서 들을 수 있습니다.'}))); return wrap; }
+  const list=[...S.guides].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  if(S.openGuide){ const i=list.findIndex(g=>g.id===S.openGuide); if(i>0) list.unshift(list.splice(i,1)[0]); }
+  list.forEach(g=>{
+    const on=TTS.playing===g.id, st=S.stops.find(s=>s.id===g.stop_id), open=S.openGuide===g.id;
+    const card=h('article',{class:'ncard'+(open?' new':'')},
+      h('div',{style:'display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{class:'nplace',text:g.title}),h('span',{class:'muted',text:'약 '+Math.max(1,Math.round((g.script||'').length/280))+'분'})),
+      st?h('span',{class:'muted',text:dayLabel(st.date)+' · '+st.title}):null);
+    const body=h('div',{class:'nmsg',style:'max-height:'+(open?'none':'4.8em')+';overflow:hidden;color:var(--muted)',text:g.script});
+    card.append(body, h('button',{class:'linkbtn',type:'button',style:'align-self:flex-start;min-height:32px',onclick:()=>{ S.openGuide=open?null:g.id; render(); }},open?'접기':'글 전체 보기'));
+    const acts=h('div',{class:'actions'},h('button',{class:'btn '+(on?'btn-ghost':'btn-navy'),type:'button',onclick:()=>on?(stopSpeak(),render()):speak(g)},on?'멈추기':'듣기'));
+    if(L()){
+      acts.append(h('button',{class:'btn btn-red',type:'button',onclick:async()=>{ const r=await S.sb.from('tour_guides').update({live_at:new Date().toISOString()}).eq('id',g.id); if(r.error) toast(errText(r.error)); else { toast('단원 휴대폰에 「지금 해설」이 뜹니다'); reloadSoon('guides'); } }},'모두에게 지금 재생'));
+      acts.append(h('button',{class:'btn btn-ghost wide',type:'button',style:'min-height:40px;font-size:13px',onclick:()=>guideSheet(g)},'고치기'));
+    }
+    card.append(acts);
+    if(g.source_url) card.append(h('a',{class:'muted',href:g.source_url,target:'_blank',rel:'noopener'},'출처: 위키백과'));
+    wrap.append(card);
+  });
+  return wrap;
 }
 
 /* ---------- 인원 점검 ---------- */
@@ -621,7 +727,7 @@ async function route(){
       try{ await loadAll(); }catch(e){ return; }
       if(code && S.tour && S.tour.code!==code.toUpperCase()){ S.anon=false; S.tour=null; screenJoin(code); return; }
       history.replaceState(null,'',location.pathname);
-      S.tab=S.tab||'notices'; S.knownNotices=new Set(S.notices.map(n=>n.id)); render(); return;
+      S.tab=S.tab||'notices'; S.knownNotices=new Set(S.notices.map(n=>n.id)); { const lg=liveGuide(); S.knownLive=lg?lg.id+lg.live_at:''; if(lg) S.tab='guide'; } render(); return;
     }
     code?screenJoin(code):screenLanding(); return;
   }

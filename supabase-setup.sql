@@ -79,6 +79,18 @@ create table if not exists public.tour_check_marks (
   primary key (check_id, member_id)
 );
 
+create table if not exists public.tour_guides (
+  id uuid primary key default gen_random_uuid(),
+  tour_id uuid not null references public.tour_tours(id) on delete cascade,
+  stop_id uuid references public.tour_stops(id) on delete set null,
+  title text not null,
+  script text not null default '',
+  source_url text not null default '',
+  live_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists tour_guides_tour on public.tour_guides(tour_id);
 create index if not exists tour_members_tour on public.tour_members(tour_id);
 create index if not exists tour_stops_tour on public.tour_stops(tour_id, date);
 create index if not exists tour_notices_tour on public.tour_notices(tour_id, created_at desc);
@@ -100,6 +112,7 @@ alter table public.tour_notices enable row level security;
 alter table public.tour_acks enable row level security;
 alter table public.tour_checks enable row level security;
 alter table public.tour_check_marks enable row level security;
+alter table public.tour_guides enable row level security;
 
 drop policy if exists tour_tours_owner on public.tour_tours;
 create policy tour_tours_owner on public.tour_tours for all to authenticated
@@ -123,6 +136,10 @@ create policy tour_acks_owner on public.tour_acks for all to authenticated
 
 drop policy if exists tour_checks_owner on public.tour_checks;
 create policy tour_checks_owner on public.tour_checks for all to authenticated
+  using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
+
+drop policy if exists tour_guides_owner on public.tour_guides;
+create policy tour_guides_owner on public.tour_guides for all to authenticated
   using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
 
 drop policy if exists tour_marks_owner on public.tour_check_marks;
@@ -157,7 +174,8 @@ begin
     'notices', coalesce((select json_agg(n order by n.created_at desc) from (select id, date, time, place, link, message, created_at from tour_notices where tour_id = t.id order by created_at desc limit 60) n), '[]'::json),
     'acks', coalesce((select json_agg(a) from (select notice_id, member_id, seen_at from tour_acks where member_id = m.id) a), '[]'::json),
     'checks', coalesce((select json_agg(c order by c.created_at desc) from (select id, title, closed, created_at from tour_checks where tour_id = t.id order by created_at desc limit 20) c), '[]'::json),
-    'marks', coalesce((select json_agg(k) from (select check_id, member_id, marked_at from tour_check_marks where member_id = m.id) k), '[]'::json)
+    'marks', coalesce((select json_agg(k) from (select check_id, member_id, marked_at from tour_check_marks where member_id = m.id) k), '[]'::json),
+    'guides', coalesce((select json_agg(g order by g.created_at desc) from (select id, stop_id, title, script, source_url, live_at, created_at from tour_guides where tour_id = t.id order by created_at desc limit 50) g), '[]'::json)
   );
 end; $$;
 
@@ -202,7 +220,7 @@ grant execute on function public.tour_share_location(uuid, double precision, dou
 do $$
 declare t text;
 begin
-  foreach t in array array['tour_members','tour_stops','tour_notices','tour_acks','tour_checks','tour_check_marks'] loop
+  foreach t in array array['tour_members','tour_stops','tour_notices','tour_acks','tour_checks','tour_check_marks','tour_guides'] loop
     if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
       execute format('alter publication supabase_realtime add table public.%I', t);
     end if;
