@@ -312,3 +312,34 @@ create policy tour_photos_insert on storage.objects for insert to authenticated
 drop policy if exists tour_photos_delete on storage.objects;
 create policy tour_photos_delete on storage.objects for delete to authenticated
   using (bucket_id = 'tour-photos' and public.tour_path_owner(name));
+
+-- ───────── 휴대폰 알림 (3단계) ─────────
+-- 단원 휴대폰이 「알림 켜기」를 누르면 여기에 받을 주소가 저장됩니다. 지도자 화면에서만 읽을 수 있습니다.
+create table if not exists public.tour_push_subs (
+  id uuid primary key default gen_random_uuid(),
+  tour_id uuid not null references public.tour_tours(id) on delete cascade,
+  member_id uuid references public.tour_members(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists tour_push_subs_tour on public.tour_push_subs(tour_id);
+alter table public.tour_push_subs enable row level security;
+drop policy if exists tour_push_owner on public.tour_push_subs;
+create policy tour_push_owner on public.tour_push_subs for all to authenticated
+  using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
+
+create or replace function public.tour_push_subscribe(p_token uuid, p_endpoint text, p_p256dh text, p_auth text)
+returns void language plpgsql security definer set search_path = public as $$
+declare m tour_members;
+begin
+  select * into m from tour_members where token = p_token;
+  if m.id is null then raise exception 'bad_token'; end if;
+  if p_endpoint !~ '^https://' or length(p_endpoint) > 1000 then raise exception 'bad_endpoint'; end if;
+  insert into tour_push_subs (tour_id, member_id, endpoint, p256dh, auth)
+  values (m.tour_id, m.id, p_endpoint, left(p_p256dh, 200), left(p_auth, 100))
+  on conflict (endpoint) do update set tour_id = excluded.tour_id, member_id = excluded.member_id, p256dh = excluded.p256dh, auth = excluded.auth;
+end; $$;
+revoke all on function public.tour_push_subscribe(uuid, text, text, text) from public;
+grant execute on function public.tour_push_subscribe(uuid, text, text, text) to anon, authenticated;

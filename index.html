@@ -590,7 +590,23 @@ const EN={'일':"Sun",
 '호텔 출발':"Hotel departure",
 '공연장 집합':"Meet at venue",
 '식당 집합':"Meet at restaurant",
-'자유 시간 뒤 집합':"Meet after free time"};
+'자유 시간 뒤 집합':"Meet after free time",'아이폰은 먼저 홈 화면에 설치한 뒤, 설치한 앱에서 알림을 켜 주세요':"On iPhone, install the app to your home screen first, then turn on notifications from the installed app.",
+'이 휴대폰 브라우저는 알림을 지원하지 않습니다':"This browser doesn't support notifications.",
+'켜는 중…':"Turning on…",
+'알림이 꺼져 있습니다. 휴대폰 설정에서 이 앱 알림을 허용해 주세요':"Notifications are off. Please allow them for this app in your phone settings.",
+'알림을 켰습니다. 공지가 오면 휴대폰이 울립니다':"Notifications on. Your phone will alert you when a notice arrives.",
+'알림을 켜지 못했습니다. 다시 눌러 주세요':"Couldn't turn on notifications. Please tap again.",
+'알림 켜기':"Turn on notifications",
+'아이폰은 홈 화면에 설치해야 알림을 받을 수 있습니다. 위의 설치 안내를 따라 주세요.':"On iPhone, the app must be installed to your home screen to get notifications. Follow the install tip above.",
+'알림을 켜면 앱을 닫아도 공지·인원 점검·해설이 오면 휴대폰이 울립니다.':"Turn on notifications so your phone alerts you about notices, headcounts and guides even when the app is closed.",
+'휴대폰 알림을 보냈습니다: ':"Notification sent to ",
+'알림이 켜져 있습니다':"Notifications are on",
+'모임 공지':"Meetup notice",
+'지도에 표시한 장소':"Place on the map",
+'이어폰을 끼고 앱에서 들어 주세요':"Put on your earphones and listen in the app.",
+'오늘의 안내':"Today's note",
+'앱을 열고 「왔어요」를 눌러 주세요':"Open the app and tap “I'm here”.",
+'알림 켬 ':"Notifications on: "};
 let LANG=(()=>{ try{ const s=localStorage.getItem('lang'); if(s==='ko'||s==='en') return s; }catch(e){} return /^ko/i.test(navigator.language||'ko')?'ko':'en'; })();
 const T=k=>(LANG==='en'&&Object.prototype.hasOwnProperty.call(EN,k))?EN[k]:k;
 const dn=n=>LANG==='en'?'Day '+n:n+'일째';
@@ -638,7 +654,7 @@ const CHECK_PRESETS=['버스 탑승','호텔 출발','공연장 집합','식당 
 
 /* ---------- 상태 ---------- */
 const S={ sb:null, session:null, uid:null, anon:false, tours:[], tour:null, me:null,
-  members:[], stops:[], notices:[], acks:[], checks:[], marks:[], guides:[], journal:[], cues:[], roommates:[], rate:1, knownLive:null, tab:null, day:null, channel:null, knownNotices:null, offline:false };
+  members:[], stops:[], notices:[], acks:[], checks:[], marks:[], guides:[], journal:[], cues:[], subs:[], roommates:[], rate:1, knownLive:null, tab:null, day:null, channel:null, knownNotices:null, offline:false };
 const cfg=window.TOUR_CONFIG||{};
 { const r=Number(store.get('ttsRate')); if(r>0) S.rate=r; }
 const configured = cfg.SUPABASE_URL && !/YOUR-PROJECT/.test(cfg.SUPABASE_URL) && cfg.SUPABASE_ANON_KEY && !/YOUR-ANON-KEY/.test(cfg.SUPABASE_ANON_KEY);
@@ -787,13 +803,13 @@ async function openTour(t,tab){
   await loadAll(); subscribe(); render();
 }
 // 지도자 화면: 표 이름 ↔ 화면 상태 이름
-const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides',journal:'tour_journal',cues:'tour_cues'};
+const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides',journal:'tour_journal',cues:'tour_cues',subs:'tour_push_subs'};
 async function loadTable(tb){
   const id=S.tour.id; let q=S.sb.from(TABLES[tb]).select('*').eq('tour_id',id);
   if(tb==='notices'||tb==='checks') q=q.order('created_at',{ascending:false}).limit(60);
   if(tb==='stops') q=q.order('date').order('time');
   const r=await q;
-  if(r.error){ if(tb==='guides'||tb==='journal'||tb==='cues'){ S[tb]=[]; return; } throw r.error; }
+  if(r.error){ if(tb==='guides'||tb==='journal'||tb==='cues'||tb==='subs'){ S[tb]=[]; return; } throw r.error; }
   const key = tb==='check_marks'?'marks':tb; S[key]=r.data||[];
 }
 // 단원 화면: 열쇠(token) 하나로 내 원정 내용 한 번에 받기
@@ -886,6 +902,7 @@ async function logout(){ closeTour(); await S.sb.auth.signOut(); S.session=null;
 /* ---------- 공지 ---------- */
 function viewNotices(){
   const wrap=h('div',{class:'stack'});
+  const pc=pushCard(); if(pc) wrap.append(pc);
   const bc=briefCard(); if(bc) wrap.append(bc);
   if(L()){
     const place=h('input',{class:'in',id:'nPlace',placeholder:T('예: 카를교 동쪽 입구 탑 앞')});
@@ -904,6 +921,7 @@ function viewNotices(){
       send.disabled=false;
       if(r.error){ toast(errText(r.error)); return; }
       toast(T('공지를 올렸습니다')); reloadSoon('notices');
+      notifyTeam(T('모임 공지')+' · '+time.value, (p||T('지도에 표시한 장소'))+(msg.value.trim()?' — '+msg.value.trim():''));
     };
     wrap.append(h('section',{class:'panel'},h('h2',{text:T('모임 공지 보내기')}),
       h('label',{class:'f'},T('모일 장소 이름'),place), h('label',{class:'f'},T('구글 지도 주소 (있으면 붙여 넣기)'),link),
@@ -1092,7 +1110,7 @@ function viewGuide(){
     card.append(body, h('button',{class:'linkbtn',type:'button',style:'align-self:flex-start;min-height:32px',onclick:()=>{ S.openGuide=open?null:g.id; render(); }},open?T('접기'):T('글 전체 보기')));
     const acts=h('div',{class:'actions'},h('button',{class:'btn '+(on?'btn-ghost':'btn-navy'),type:'button',onclick:()=>on?(stopSpeak(),render()):speak(g)},on?T('멈추기'):T('듣기')));
     if(L()){
-      acts.append(h('button',{class:'btn btn-red',type:'button',onclick:async()=>{ const r=await S.sb.from('tour_guides').update({live_at:new Date().toISOString()}).eq('id',g.id); if(r.error) toast(errText(r.error)); else { toast(T('단원 휴대폰에 「지금 해설」이 뜹니다')); reloadSoon('guides'); } }},T('모두에게 지금 재생')));
+      acts.append(h('button',{class:'btn btn-red',type:'button',onclick:async()=>{ const r=await S.sb.from('tour_guides').update({live_at:new Date().toISOString()}).eq('id',g.id); if(r.error) toast(errText(r.error)); else { toast(T('단원 휴대폰에 「지금 해설」이 뜹니다')); reloadSoon('guides'); notifyTeam(T('지금 해설')+': '+g.title, T('이어폰을 끼고 앱에서 들어 주세요')); } }},T('모두에게 지금 재생')));
       acts.append(h('button',{class:'btn btn-ghost wide',type:'button',style:'min-height:40px;font-size:13px',onclick:()=>guideSheet(g)},T('고치기')));
     }
     card.append(acts);
@@ -1219,7 +1237,7 @@ function briefCard(){
     return h('section',{class:'hero',style:'gap:6px'},h('div',{class:'row'},h('span',{text:T('오늘의 안내 · ')+dayLabel(d)})),h('div',{class:'nmsg',style:'font-size:17px;font-weight:700;color:#fff',text:text})); }
   const inp=h('textarea',{class:'in',style:'min-height:64px',placeholder:T('예: 오늘 12도·비 예보, 우산 챙기기 · 기상 7시 · 조식 7시 반 · 8시 로비 집합')}); inp.value=text;
   const sv=h('button',{class:'btn btn-navy',type:'button'},T('안내 올리기'));
-  sv.onclick=async()=>{ sv.disabled=true; try{ await saveJournal(d,{brief:inp.value.trim().slice(0,300)}); toast(T('오늘의 안내를 올렸습니다')); render(); }catch(e){ toast(errText(e)); } sv.disabled=false; };
+  sv.onclick=async()=>{ sv.disabled=true; try{ await saveJournal(d,{brief:inp.value.trim().slice(0,300)}); toast(T('오늘의 안내를 올렸습니다')); render(); notifyTeam(T('오늘의 안내'), inp.value.trim()); }catch(e){ toast(errText(e)); } sv.disabled=false; };
   return h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h2',{text:T('오늘의 한 줄 안내')}),h('span',{class:'muted',text:dayLabel(d)})),
     h('span',{class:'muted',text:T('단원 공지 화면 맨 위에 크게 보입니다.')}),inp,sv);
 }
@@ -1267,6 +1285,7 @@ function checklistEditor(){
 function viewMe(){
   const wrap=h('div',{class:'stack'}), me=S.me, items=checklistItems(), packed=new Set(Array.isArray(me.packed)?me.packed:[]);
   wrap.append(h('button',{class:'btn btn-red btn-big',type:'button',onclick:emergencySheet},T('긴급 연락처')));
+  { const pc=pushCard(); if(pc) wrap.append(pc); else if(S.pushOn) wrap.append(h('div',{class:'banner',style:'background:var(--soft)'},h('span',{text:T('알림이 켜져 있습니다')}))); }
   wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:T('내 방')}),h('span',{text:me.seat?T('버스 ')+me.seat:T('버스 좌석 미정')})),
     h('div',{class:'big',style:'font-size:44px'},me.room||T('미정')),
     h('div',{class:'row'},h('span',{text:S.roommates.length?T('함께 쓰는 친구: ')+S.roommates.join(', '):(me.room?T('혼자 쓰는 방'):T('지도자가 방을 정하면 여기에 보입니다'))}))));
@@ -1405,6 +1424,46 @@ function viewQuiz(){
   return sec;
 }
 
+/* ---------- 휴대폰 알림 ---------- */
+const VAPID=(window.TOUR_CONFIG||{}).VAPID_PUBLIC_KEY||'';
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const pushSupported=()=>!!VAPID&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+S.pushOn=false;
+function b64u(s){ const pad='='.repeat((4-s.length%4)%4); const b=atob((s+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from([...b].map(c=>c.charCodeAt(0))); }
+async function savePushSub(sub){
+  const j=sub.toJSON(); const r=await S.sb.rpc('tour_push_subscribe',{p_token:S.token,p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth});
+  if(r.error) throw r.error;
+}
+async function checkPush(){
+  if(!S.anon||!pushSupported()||Notification.permission!=='granted'){ S.pushOn=false; return; }
+  try{ const reg=await Promise.race([navigator.serviceWorker.ready,new Promise((_,no)=>setTimeout(()=>no(new Error('sw')),4000))]); const sub=await reg.pushManager.getSubscription();
+    if(sub){ S.pushOn=true; savePushSub(sub).catch(()=>{}); } else S.pushOn=false; }catch(e){ S.pushOn=false; }
+}
+async function enablePush(btn){
+  if(isIOS&&!standalone()){ toast(T('아이폰은 먼저 홈 화면에 설치한 뒤, 설치한 앱에서 알림을 켜 주세요')); return; }
+  if(!pushSupported()){ toast(T('이 휴대폰 브라우저는 알림을 지원하지 않습니다')); return; }
+  if(btn){ btn.disabled=true; btn.textContent=T('켜는 중…'); }
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ toast(T('알림이 꺼져 있습니다. 휴대폰 설정에서 이 앱 알림을 허용해 주세요')); return; }
+    const reg=await Promise.race([navigator.serviceWorker.ready,new Promise((_,no)=>setTimeout(()=>no(new Error('sw')),8000))]);
+    const sub=(await reg.pushManager.getSubscription())||(await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)}));
+    await savePushSub(sub); S.pushOn=true; toast(T('알림을 켰습니다. 공지가 오면 휴대폰이 울립니다'));
+  }catch(e){ toast(T('알림을 켜지 못했습니다. 다시 눌러 주세요')); }
+  finally{ if(btn){ btn.disabled=false; } render(); }
+}
+function pushCard(){
+  if(!S.anon||S.pushOn||!VAPID) return null;
+  const b=h('button',{class:'btn btn-red',type:'button',style:'min-height:44px'},T('알림 켜기'));
+  b.onclick=()=>enablePush(b);
+  return h('div',{class:'banner',style:'background:var(--soft)'},h('span',{text:isIOS&&!standalone()?T('아이폰은 홈 화면에 설치해야 알림을 받을 수 있습니다. 위의 설치 안내를 따라 주세요.'):T('알림을 켜면 앱을 닫아도 공지·인원 점검·해설이 오면 휴대폰이 울립니다.')}),b);
+}
+async function notifyTeam(title,body){
+  if(L()===false||!VAPID) return;
+  try{ const r=await S.sb.functions.invoke('tour-push',{body:{tour_id:S.tour.id,title,body,url:location.origin+location.pathname}});
+    if(r.error) return; const n=r.data&&r.data.sent; if(n) toast(T('휴대폰 알림을 보냈습니다: ')+n+T('명')); }catch(e){}
+}
+
 /* ---------- 인원 점검 ---------- */
 function locationButton(){
   const b=h('button',{class:'btn btn-line',type:'button'},T('길을 잃었어요 · 내 위치 보내기'));
@@ -1451,7 +1510,7 @@ function viewCheck(){
   } else {
     if(!mem.length) wrap.append(h('div',{class:'empty'},h('strong',{text:T('아직 단원이 없습니다')}),h('span',{text:T('「단원」 칸에서 초대 번호를 보내거나 직접 단원을 추가해 주세요.')})));
     const title=h('input',{class:'in',id:'cTitle',placeholder:T('예: 버스 탑승')});
-    const start=async t=>{ t=(t||'').trim(); if(!t){ toast(T('점검 이름을 넣어 주세요')); title.focus(); return; } const r=await S.sb.from('tour_checks').insert({tour_id:S.tour.id,title:t}); if(r.error) toast(errText(r.error)); else { toast(t+T(' 점검을 시작했습니다')); reloadSoon('checks'); } };
+    const start=async t=>{ t=(t||'').trim(); if(!t){ toast(T('점검 이름을 넣어 주세요')); title.focus(); return; } const r=await S.sb.from('tour_checks').insert({tour_id:S.tour.id,title:t}); if(r.error) toast(errText(r.error)); else { toast(t+T(' 점검을 시작했습니다')); reloadSoon('checks'); notifyTeam(T('인원 점검')+': '+T(t), T('앱을 열고 「왔어요」를 눌러 주세요')); } };
     wrap.append(h('section',{class:'panel'},h('h2',{text:T('인원 점검 시작')}),
       h('div',{class:'catsel'},CHECK_PRESETS.map(p=>h('button',{type:'button',onclick:()=>start(T(p))},T(p)))),
       h('label',{class:'f'},T('다른 이름으로'),title), h('button',{class:'btn btn-red',type:'button',onclick:()=>start(title.value)},T('점검 시작')),
@@ -1479,7 +1538,8 @@ function viewMembers(){
   const add=h('button',{class:'btn btn-ghost',type:'button'},T('직접 추가'));
   add.onclick=async()=>{ if(!name.value.trim()){ toast(T('이름을 넣어 주세요')); return; } const r=await S.sb.from('tour_members').insert({tour_id:S.tour.id,name:name.value.trim().slice(0,30),grp:grp.value,token:null}); if(r.error) toast(errText(r.error)); else { name.value=''; toast(T('단원을 추가했습니다')); reloadSoon('members'); } };
   const mem=[...S.members].sort((a,b)=>a.name.localeCompare(b.name,'ko'));
-  wrap.append(h('section',{class:'panel'},h('h2',{text:T('단원 ')+mem.length+T('명')}),
+  const pushN=new Set(S.subs.map(x=>x.member_id)).size;
+  wrap.append(h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:8px'},h('h2',{text:T('단원 ')+mem.length+T('명')}),VAPID?h('span',{class:'pill'+(pushN<mem.filter(m=>m.token).length?' warn':''),text:T('알림 켬 ')+pushN+T('명')}):null),
     mem.length? h('div',{class:'list',style:'padding:0;background:none'},mem.map(m=>h('div',{class:'row-item'},
       h('button',{class:'row-body',type:'button',onclick:()=>memberSheet(m)},h('span',{class:'ttl'},m.name+' · '+T(m.grp),m.health?h('span',{class:'tag show',style:'margin-left:6px',text:T('건강 메모')}):null),
         h('span',{class:'muted',text:[m.room?m.room+T('호'):'',m.seat?T('버스 ')+m.seat:'',checklistItems().length&&m.token?T('준비물 ')+packedCount(m)+'/'+checklistItems().length:''].filter(Boolean).join(' · ')||T('눌러서 방·좌석·건강 메모 넣기')}),
@@ -1525,7 +1585,7 @@ async function route(){
       try{ await loadAll(); }catch(e){ return; }
       if(code && S.tour && S.tour.code!==code.toUpperCase()){ S.anon=false; S.tour=null; screenJoin(code); return; }
       history.replaceState(null,'',location.pathname);
-      S.tab=S.tab||'notices'; S.knownNotices=new Set(S.notices.map(n=>n.id)); { const lg=liveGuide(); S.knownLive=lg?lg.id+lg.live_at:''; if(lg) S.tab='guide'; } render(); return;
+      checkPush().then(()=>{ if(S.pushOn) render(); }); S.tab=S.tab||'notices'; S.knownNotices=new Set(S.notices.map(n=>n.id)); { const lg=liveGuide(); S.knownLive=lg?lg.id+lg.live_at:''; if(lg) S.tab='guide'; } render(); return;
     }
     code?screenJoin(code):screenLanding(); return;
   }

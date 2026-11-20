@@ -1,5 +1,5 @@
 // KICKSTART UP 원정 — 인터넷이 약한 곳에서도 앱 화면이 열리게 저장해 둡니다.
-const CACHE = 'tour-v6';
+const CACHE = 'tour-v7';
 const SHELL = ['./', './index.html', './config.js', './manifest.webmanifest',
   './vendor/supabase.js', './vendor/591.supabase.js', './vendor/qrcode.js', './phrases.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-180.png'];
@@ -26,4 +26,22 @@ self.addEventListener('fetch', e => {
   if (sameOrigin || url.hostname.endsWith('gstatic.com') || url.hostname.endsWith('googleapis.com')) {
     e.respondWith(caches.match(req).then(r => r || fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })));
   }
+});
+
+// 휴대폰 알림 받기
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'KICKSTART UP', {
+    body: d.body || '', icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
+    tag: 'tour-' + Date.now(), renotify: true, vibrate: [200, 100, 200], data: { url: d.url || './' }
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    for (const c of list) { if ('focus' in c) { c.navigate ? c.navigate(url).catch(() => {}) : null; return c.focus(); } }
+    return self.clients.openWindow(url);
+  }));
 });

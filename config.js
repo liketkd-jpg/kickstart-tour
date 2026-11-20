@@ -2,5 +2,7 @@
 // 원정 앱 표는 모두 tour_ 로 시작해서 대회 자료와 섞이지 않습니다.
 window.TOUR_CONFIG = {
   SUPABASE_URL: 'https://nwdptjumclgzbwbsaoxr.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_IdccZOLa0qHGA80kLLD15g__obCiOiG'
+  SUPABASE_ANON_KEY: 'sb_publishable_IdccZOLa0qHGA80kLLD15g__obCiOiG',
+  // 휴대폰 알림용 공개 열쇠 (비밀 열쇠는 Supabase Edge Function Secrets 에만 넣습니다)
+  VAPID_PUBLIC_KEY: 'BPi6_5jwM3YTioy_7oAY4mzLz57RJx7kP9VrGZknl-TOJTkEmZ3qkDmNFszhS41NfEv6O8BOXHI7ukiLbh6Zwf4'
 };
