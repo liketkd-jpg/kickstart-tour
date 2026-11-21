@@ -345,6 +345,7 @@ const EN={'일':"Sun",
 '구글 지도에서 「공유 → 링크 복사」 후 붙여 넣기':"In Google Maps: Share → Copy link, then paste",
 'AI 해설 만들기':"Write guide with AI",
 '자세한 내용':"Details",
+'초':"s",
 '구글 지도 링크나 장소 이름을 넣어 주세요':"Enter a Google Maps link or a place name.",
 'AI가 해설을 쓰는 중… (10~30초)':"AI is writing… (10–30 s)",
 'AI 서버가 아직 준비되지 않았습니다. 설정 안내대로 tour-guide-ai를 만들어 주세요':"The AI server isn't set up yet. Deploy tour-guide-ai as described in the setup guide.",
@@ -1196,8 +1197,8 @@ function guideSheet(g){
     if(!input){ toast(T('구글 지도 링크나 장소 이름을 넣어 주세요')); mapIn.focus(); return; }
     if(script.value.trim()&&!confirmReplace()) return;
     ai.disabled=true; aiErr.hidden=true; ai.textContent=T('AI가 해설을 쓰는 중… (10~30초)');
-    try{ const {data,error}=await S.sb.functions.invoke('tour-guide-ai',{body:{tour_id:S.tour.id,input:link&&q?link+' '+q:input,lang:LANG}});
-      if(error||!data){ let det=String(error&&error.message||''); try{ const b=error&&error.context&&await error.context.text(); if(b) det+=' '+b.slice(0,200); }catch(e){} showErr(T('AI 서버가 아직 준비되지 않았습니다. 설정 안내대로 tour-guide-ai를 만들어 주세요'),det); return; }
+    const t0=Date.now(); try{ const {data,error}=await S.sb.functions.invoke('tour-guide-ai',{body:{tour_id:S.tour.id,input:link&&q?link+' '+q:input,lang:LANG}});
+      if(error||!data){ let det=String(error&&error.message||''); try{ const b=error&&error.context&&await error.context.text(); if(b) det+=' '+b.slice(0,200); }catch(e){} det+=' ('+Math.round((Date.now()-t0)/1000)+T('초')+')'; showErr(T('AI 서버가 아직 준비되지 않았습니다. 설정 안내대로 tour-guide-ai를 만들어 주세요'),det); return; }
       if(data.error){ showErr(T(AI_ERR[data.error]||'AI가 글을 쓰지 못했습니다. 잠시 뒤 다시 해 보세요'),data.detail||(AI_ERR[data.error]?'':data.error)); return; }
       script.value=data.script; if(!q&&data.title){ title.value=data.title.slice(0,60); titleAuto=false; }
       if(link){ srcUrl=link; src.textContent=srcLabel(link); } else { srcUrl=''; src.textContent=''; }

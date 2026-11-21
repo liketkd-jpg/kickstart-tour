@@ -84,9 +84,15 @@ async function gemini(place: string, lang: string) {
   }
   const notes: string[] = err ? [err] : [];
   let quota = false;
-  for (const model of models.slice(0, 5)) {
+  const deadline = Date.now() + 110000; // 서버 시간 제한(150초) 안에 꼭 답하도록
+  for (const model of models.slice(0, 3)) {
     for (const jsonMode of [true, false]) {
-      const cfg: Record<string, unknown> = { temperature: 0.6, maxOutputTokens: 16384 };
+      const left = deadline - Date.now();
+      if (left < 8000) { notes.push('timeout'); return { error: 'ai_failed', detail: notes.slice(-4).join(' | ').slice(0, 400) }; }
+      const cfg: Record<string, unknown> = { temperature: 0.6, maxOutputTokens: 8192 };
+      // 생각(thinking)을 짧게 해서 빨리 쓰게 함. 맞지 않는 모델이면 400 → 일반 방식으로 다시
+      if (jsonMode) cfg.thinkingConfig = /gemini-[3-9]|latest/.test(model) ? { thinkingLevel: 'low' } : /2\.5/.test(model) ? { thinkingBudget: 0 } : undefined;
+      if (!cfg.thinkingConfig) delete cfg.thinkingConfig;
       if (jsonMode) {
         cfg.responseMimeType = 'application/json';
         cfg.responseSchema = { type: 'OBJECT', properties: { title: { type: 'STRING' }, script: { type: 'STRING' } }, required: ['title', 'script'] };
@@ -98,7 +104,7 @@ async function gemini(place: string, lang: string) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
           body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: cfg }),
-          signal: AbortSignal.timeout(50000),
+          signal: AbortSignal.timeout(Math.min(45000, left - 3000)),
         });
       } catch (e) { notes.push(`${model}: ${String(e).slice(0, 60)}`); break; }
       const d = await r.json().catch(() => ({}));
