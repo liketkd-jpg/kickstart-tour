@@ -118,6 +118,7 @@ textarea.in{padding:12px 14px;min-height:84px;resize:vertical;line-height:1.6}
 .sheet-wrap{position:fixed;inset:0;background:var(--scrim);z-index:20;display:flex;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 .sheet{background:var(--bg);width:100%;max-width:620px;max-height:calc(100% - env(safe-area-inset-top,0px) - 24px);overflow-y:auto;border-radius:26px 26px 0 0;
   padding:12px max(18px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.sheet>*{flex-shrink:0}
 .sheet::before{content:"";width:40px;height:5px;border-radius:3px;background:var(--field-line);align-self:center}
 .sheet-top{display:flex;justify-content:space-between;align-items:center}
 .x{width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--card);font-size:20px;line-height:1}
@@ -656,7 +657,58 @@ const EN={'일':"Sun",
 '통과한 레슨':"Lessons passed",
 '틀린 문장을 문장 공부에서 다시 들어 보고 도전하세요':"Listen again to the ones you missed, then try again.",
 '평균 ':"Average ",
-'현지어 학습 현황':"Language learning progress"};
+'현지어 학습 현황':"Language learning progress",' 제출':" submitted",
+'+ 시험 내기':"+ New test",
+'개 중에서 ':" phrases in range — ",
+'고른 범위의 문장 ':"",
+'다시 열기':"Reopen",
+'다음':"Next",
+'답안 제출하기':"Submit answers",
+'답안 확인':"Review",
+'레슨을 하나 이상 골라 주세요':"Pick at least one lesson.",
+'마감':"Closed",
+'많이 틀린 문제':"Most-missed questions",
+'모든 문제를 풀었습니다':"All questions answered",
+'문제':" questions",
+'문제 · 앱을 열고 시험을 풀어 주세요':" questions · open the app to take the test",
+'문제 방식':"Question type",
+'문제 수':"Number of questions",
+'문제가 나갑니다. 모든 단원이 같은 문제를 풉니다.':" questions will be asked. Every member gets the same questions.",
+'문제가 너무 적습니다. 레슨을 더 골라 주세요':"Too few questions. Pick more lessons.",
+'섞어서':"Mixed",
+'시험':"test",
+'시험 내기':"Give test",
+'시험 마감':"Close test",
+'시험 범위 (레슨)':"Test range (lessons)",
+'시험 보기':"Take test",
+'시험 이름':"Test name",
+'시험 지우기':"Delete test",
+'시험을 냈습니다. 단원 화면에 시험이 뜹니다':"Test created. It now appears on members' screens.",
+'시험을 다시 열었습니다':"Test reopened.",
+'시험을 마감했습니다':"Test closed.",
+'시험이 마감되었습니다':"This test is closed.",
+'아직 안 본 단원 ':"Not taken yet: ",
+'아직 제출한 단원이 없습니다.':"No one has submitted yet.",
+'예: 출발 전 독일어 시험':"e.g. Pre-departure German test",
+'응시 ':"Taken ",
+'이전':"Back",
+'제출 완료':"Submitted",
+'제출하는 중…':"Submitting…",
+'제출하면 고칠 수 없습니다. 점수는 바로 지도자께 전달됩니다.':"You can't change answers after submitting. Your score goes straight to your leader.",
+'제출했습니다':"Submitted.",
+'지도자 시험 결과':"Leader test result",
+'지도자가 낸 시험: ':"Test from your leader: ",
+'지도자가 시험을 냈습니다':"Your leader posted a test",
+'지도자에게 문의해 주세요.':"Please ask your leader.",
+'진행 중':"Open",
+'처음부터 다시 보기':"Review from the start",
+'출발 전에 다 같이 시험을 보세요. 점수는 서버가 매기고 한 사람당 한 번만 낼 수 있습니다.':"Give everyone a test before departure. Scores are graded on the server, one attempt per person.",
+'틀린 문장은 레슨에서 다시 들어 보세요':"Listen again to the missed phrases in the lessons.",
+'틀린 문제 ':"Missed: ",
+'평균 점수 · 응시 ':"Average score · taken ",
+'현지어 시험':"Language test",
+'현지어 시험 내기':"Create a language test",
+'훌륭합니다! 현지에서 자신 있게 써 보세요':"Excellent! Use them with confidence on the trip."};
 let LANG=(()=>{ try{ const s=localStorage.getItem('lang'); if(s==='ko'||s==='en') return s; }catch(e){} return /^ko/i.test(navigator.language||'ko')?'ko':'en'; })();
 const T=k=>(LANG==='en'&&Object.prototype.hasOwnProperty.call(EN,k))?EN[k]:k;
 const dn=n=>LANG==='en'?'Day '+n:n+'일째';
@@ -853,13 +905,13 @@ async function openTour(t,tab){
   await loadAll(); subscribe(); render();
 }
 // 지도자 화면: 표 이름 ↔ 화면 상태 이름
-const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides',journal:'tour_journal',cues:'tour_cues',subs:'tour_push_subs'};
+const TABLES={members:'tour_members',stops:'tour_stops',notices:'tour_notices',acks:'tour_acks',checks:'tour_checks',check_marks:'tour_check_marks',guides:'tour_guides',journal:'tour_journal',cues:'tour_cues',subs:'tour_push_subs',exams:'tour_exams',exam_results:'tour_exam_results'};
 async function loadTable(tb){
   const id=S.tour.id; let q=S.sb.from(TABLES[tb]).select('*').eq('tour_id',id);
-  if(tb==='notices'||tb==='checks') q=q.order('created_at',{ascending:false}).limit(60);
+  if(tb==='notices'||tb==='checks'||tb==='exams') q=q.order('created_at',{ascending:false}).limit(60);
   if(tb==='stops') q=q.order('date').order('time');
   const r=await q;
-  if(r.error){ if(tb==='guides'||tb==='journal'||tb==='cues'||tb==='subs'){ S[tb]=[]; return; } throw r.error; }
+  if(r.error){ if(['guides','journal','cues','subs','exams','exam_results'].includes(tb)){ S[tb]=[]; return; } throw r.error; }
   const key = tb==='check_marks'?'marks':tb; S[key]=r.data||[];
 }
 // 단원 화면: 열쇠(token) 하나로 내 원정 내용 한 번에 받기
@@ -867,18 +919,18 @@ async function loadStudent(){
   const r=await S.sb.rpc('tour_student_state',{p_token:S.token});
   if(r.error) throw r.error;
   const d=r.data; S.tour=d.tour; S.me=d.me; S.members=[d.me];
-  S.stops=d.stops||[]; S.notices=d.notices||[]; S.acks=d.acks||[]; S.checks=d.checks||[]; S.marks=d.marks||[]; S.guides=d.guides||[]; S.journal=d.journal||[]; S.cues=d.cues||[]; S.roommates=d.roommates||[];
+  S.stops=d.stops||[]; S.notices=d.notices||[]; S.acks=d.acks||[]; S.checks=d.checks||[]; S.marks=d.marks||[]; S.guides=d.guides||[]; S.journal=d.journal||[]; S.cues=d.cues||[]; S.roommates=d.roommates||[]; S.exams=d.exams||[]; S.exam_results=d.exam_results||[];
 }
 async function loadAll(){
   const ck='cache:'+(S.anon?'student':S.tour.id);
   try{
     if(S.anon) await loadStudent(); else await Promise.all(Object.keys(TABLES).map(loadTable));
     S.offline=false; $('netBar').hidden=true;
-    store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks,guides:S.guides,journal:S.journal,cues:S.cues,roommates:S.roommates}));
+    store.set(ck, JSON.stringify({t:Date.now(),tour:S.tour,me:S.me,members:S.members,stops:S.stops,notices:S.notices,acks:S.acks,checks:S.checks,marks:S.marks,guides:S.guides,journal:S.journal,cues:S.cues,roommates:S.roommates,exams:S.exams,exam_results:S.exam_results}));
   }catch(err){
     if(/bad_token/.test(String(err&&err.message))){ store.set('tourToken',null); S.token=null; S.anon=false; S.tour=null; toast(T('원정에서 빠졌습니다. 다시 참가해 주세요')); screenJoin(''); throw err; }
     const c=store.get(ck);
-    if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks,guides:d.guides||[],journal:d.journal||[],cues:d.cues||[],roommates:d.roommates||[]}); if(S.anon) S.me=d.me; }catch(e){} }
+    if(c){ try{ const d=JSON.parse(c); Object.assign(S,{tour:d.tour||S.tour,members:d.members,stops:d.stops,notices:d.notices,acks:d.acks,checks:d.checks,marks:d.marks,guides:d.guides||[],journal:d.journal||[],cues:d.cues||[],roommates:d.roommates||[],exams:d.exams||[],exam_results:d.exam_results||[]}); if(S.anon) S.me=d.me; }catch(e){} }
     else if(!S.tour) throw err;
     S.offline=true; const nb=$('netBar'); nb.replaceChildren(h('span',{text:T('인터넷이 끊겨 마지막으로 받은 내용을 보여 줍니다. 연결되면 저절로 새로 고칩니다.')})); nb.hidden=false;
   }
@@ -906,6 +958,9 @@ function notifyNew(){
   const lg=liveGuide();
   if(S.knownLive!==null && lg && lg.id+lg.live_at!==S.knownLive && S.anon){ toast(T('지금 해설: ')+lg.title); S.tab='guide'; try{ navigator.vibrate&&navigator.vibrate(200); }catch(e){} }
   S.knownLive = lg ? lg.id+lg.live_at : '';
+  const ex=new Set(openExams().map(e=>e.id));
+  if(S.anon && S.knownExams && [...ex].some(x=>!S.knownExams.has(x))){ toast(T('지도자가 시험을 냈습니다')); try{ navigator.vibrate&&navigator.vibrate(200); }catch(e){} }
+  S.knownExams=ex;
 }
 const refresh=()=>{ if(S.tour) loadAll().then(()=>{ notifyNew(); render(); }).catch(()=>{}); };
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') refresh(); });
@@ -953,6 +1008,7 @@ async function logout(){ closeTour(); await S.sb.auth.signOut(); S.session=null;
 function viewNotices(){
   const wrap=h('div',{class:'stack'});
   const pc=pushCard(); if(pc) wrap.append(pc);
+  { const eb=examBanner(); if(eb) wrap.append(eb); }
   const bc=briefCard(); if(bc) wrap.append(bc);
   if(L()){
     const place=h('input',{class:'in',id:'nPlace',placeholder:T('예: 카를교 동쪽 입구 탑 앞')});
@@ -1471,7 +1527,9 @@ function startPron(l){
 }
 
 function viewLearn(){
+  if(S.anon&&S.examRun) return viewExamStudent();
   const L2=S.learn, wrap=h('div',{class:'stack'});
+  { const eb=examBanner(); if(eb) wrap.append(eb); }
   if(!learnLangs().includes(L2.lang)) L2.lang=learnLangs()[0];
   const lg=L2.lang, pr=langProg(lg);
   wrap.append(h('div',{class:'chips',role:'group','aria-label':T('언어')},learnLangs().map(k=>h('button',{class:'chip',type:'button','aria-pressed':String(k===lg),onclick:()=>{ L2.lang=k; L2.quiz=null; L2.pron=null; stopSpeak(); render(); }},langName(k)+' · '+langWhere(k)))));
@@ -1481,6 +1539,8 @@ function viewLearn(){
     wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:langName(lg)+' · '+langWhere(lg)}),h('span',{text:S.anon?T('기록이 지도자께 전달됩니다'):T('지도자 미리 보기')})),
       h('div',{class:'big'},String(passedN),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+LESSONS.length})),
       h('div',{class:'row'},h('span',{text:T('통과한 레슨')}))));
+    if(!S.anon) wrap.append(viewExamsLeader());
+    else { const done=S.exams.filter(e=>myResult(e.id)); if(done.length) wrap.append(h('div',{class:'list'},done.map(e=>{ const r=myResult(e.id); return h('button',{class:'row-item',type:'button',style:'width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;color:var(--fg)',onclick:()=>{ S.examRun={id:e.id,i:0,answers:[]}; render(); }},h('div',{class:'row-body'},h('span',{class:'ttl',text:e.title}),h('span',{class:'muted',text:T('지도자 시험 결과')})),h('span',{class:'pill',text:r.score+' / '+r.total})); }))); }
     wrap.append(h('span',{class:'muted',text:T('레슨마다 퀴즈 80% 이상, 발음 시험 5문장 중 3문장 이상을 통과하면 다음 레슨이 열립니다.')}));
     LESSONS.forEach((l,i)=>{
       const open=isOpen(lg,i), passed=pr.passed.includes(l.id), n=Math.min(8,testable(l,lg).length);
@@ -1597,6 +1657,139 @@ function viewPron(l){
   if(ps.last) sec.append(h('div',{class:'banner',style:ps.last.score>=need?'background:var(--soft)':''},h('span',{text:T('알아들은 말: ')+(ps.last.heard||T('(없음)'))+' · '+T('닮은 정도 ')+Math.round(ps.last.score*100)+'%'})));
   if(ps.tries>0&&ps.last&&ps.last.score<need&&ps.tries<PRON_TRIES) sec.append(h('button',{class:'linkbtn',type:'button',style:'align-self:flex-end',onclick:next},T('이 문장 넘어가기')));
   return sec;
+}
+
+/* ---------- 지도자가 내는 현지어 시험 ---------- */
+S.exams=[]; S.exam_results=[]; S.examRun=null; S.knownExams=null;
+const examModeName=m=>m==='listen'?T('듣고 고르기'):m==='mixed'?T('섞어서'):T('뜻 보고 고르기');
+const openExams=()=>S.exams.filter(e=>e.open);
+const myResult=id=>S.exam_results.find(r=>r.exam_id===id);
+function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function buildExam(lg,lessonIds,n,mode){
+  const ids=[...new Set(LESSONS.filter(l=>lessonIds.includes(l.id)).flatMap(l=>l.ids))];
+  const pool=ids.map(i=>PHMAP[i]).filter(p=>p&&(!p.only||p.only===lg)&&!/○○|…/.test(p[lg]));
+  const others=PH.list.filter(p=>(!p.only||p.only===lg)&&!/○○|…/.test(p[lg]));
+  return shuffleArr(pool.slice()).slice(0,n).map((p,i)=>({pid:p.id,mode:mode==='mixed'?(i%2?'listen':'meaning'):mode,
+    opts:shuffleArr([p.id].concat(shuffleArr(pool.filter(x=>x.id!==p.id)).concat(shuffleArr(others.filter(x=>x.id!==p.id))).map(x=>x.id).filter((v,k,a)=>a.indexOf(v)===k).slice(0,3)))}));
+}
+
+// 지도자: 시험 내기
+function examCreateSheet(){
+  const st={lang:learnLangs()[0],lessons:LESSONS.map(l=>l.id),n:10,mode:'meaning'};
+  const title=h('input',{class:'in',value:'',placeholder:T('예: 출발 전 독일어 시험')});
+  const box=h('div',{class:'stack'});
+  const paint=()=>{
+    const chips=(arr,cur,on)=>h('div',{class:'catsel'},arr.map(([k,l])=>h('button',{type:'button','aria-pressed':String(Array.isArray(cur)?cur.includes(k):cur===k),onclick:()=>{ on(k); paint(); }},l)));
+    const pool=LESSONS.filter(l=>st.lessons.includes(l.id)).flatMap(l=>testable(l,st.lang)).length;
+    box.replaceChildren(
+      h('div',{class:'f',style:'display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600'},T('언어'),chips(learnLangs().map(k=>[k,langName(k)]),st.lang,k=>st.lang=k)),
+      h('div',{class:'f',style:'display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600'},T('시험 범위 (레슨)'),
+        chips(LESSONS.map((l,i)=>[l.id,(i+1)+'. '+lessonName(l)]),st.lessons,k=>{ st.lessons=st.lessons.includes(k)?st.lessons.filter(x=>x!==k):st.lessons.concat(k); })),
+      h('div',{class:'f',style:'display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600'},T('문제 수'),chips([[10,'10'],[15,'15'],[20,'20']],st.n,k=>st.n=k)),
+      h('div',{class:'f',style:'display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600'},T('문제 방식'),chips([['meaning',T('뜻 보고 고르기')],['listen',T('듣고 고르기')],['mixed',T('섞어서')]],st.mode,k=>st.mode=k)),
+      h('span',{class:'muted',text:T('고른 범위의 문장 ')+pool+T('개 중에서 ')+Math.min(st.n,pool)+T('문제가 나갑니다. 모든 단원이 같은 문제를 풉니다.')}));
+  };
+  paint();
+  const go=h('button',{class:'btn btn-red',type:'button'},T('시험 내기'));
+  go.onclick=async()=>{
+    if(!st.lessons.length){ toast(T('레슨을 하나 이상 골라 주세요')); return; }
+    const qs=buildExam(st.lang,st.lessons,st.n,st.mode); if(qs.length<4){ toast(T('문제가 너무 적습니다. 레슨을 더 골라 주세요')); return; }
+    const t=title.value.trim()||(langName(st.lang)+' '+T('시험')+' · '+dayLabel(today()));
+    go.disabled=true; const r=await S.sb.from('tour_exams').insert({tour_id:S.tour.id,title:t.slice(0,60),lang:st.lang,mode:st.mode,qs}).select().single(); go.disabled=false;
+    if(r.error){ toast(errText(r.error)); return; }
+    S.exams.unshift(r.data); closeSheet(); toast(T('시험을 냈습니다. 단원 화면에 시험이 뜹니다')); render();
+    notifyTeam(T('현지어 시험')+': '+t, qs.length+T('문제 · 앱을 열고 시험을 풀어 주세요'));
+  };
+  openSheet(T('현지어 시험 내기'),[h('label',{class:'f'},T('시험 이름'),title),box,go]);
+}
+function examStats(e){
+  const res=S.exam_results.filter(r=>r.exam_id===e.id), mem=S.members.filter(m=>m.token);
+  const byM=new Map(res.map(r=>[r.member_id,r]));
+  const avg=res.length?res.reduce((t,r)=>t+r.score,0)/res.length:0;
+  return {res,mem,byM,avg,total:(e.qs||[]).length,notYet:mem.filter(m=>!byM.has(m.id))};
+}
+function viewExamsLeader(){
+  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:8px'},h('h2',{text:T('현지어 시험')}),
+    h('button',{class:'btn btn-red',type:'button',style:'min-height:40px;font-size:13px',onclick:examCreateSheet},T('+ 시험 내기'))),
+    h('span',{class:'muted',text:T('출발 전에 다 같이 시험을 보세요. 점수는 서버가 매기고 한 사람당 한 번만 낼 수 있습니다.')}));
+  if(!S.exams.length) return sec;
+  sec.append(h('div',{class:'list'},S.exams.map(e=>{ const st=examStats(e);
+    return h('button',{class:'row-item',type:'button',style:'width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;color:var(--fg)',onclick:()=>examResultSheet(e)},
+      h('div',{class:'row-body'},h('span',{class:'ttl',text:e.title}),h('span',{class:'muted',text:langName(e.lang)+' · '+st.total+T('문제')+' · '+examModeName(e.mode)+' · '+T('응시 ')+st.res.length+' / '+st.mem.length+T('명')+(st.res.length?' · '+T('평균 ')+st.avg.toFixed(1):'')})),
+      h('span',{class:'pill'+(e.open?' warn':''),text:e.open?T('진행 중'):T('마감')})); })));
+  return sec;
+}
+function examResultSheet(e){
+  const st=examStats(e), rows=st.res.slice().sort((a,b)=>b.score-a.score);
+  const name=id=>{ const m=S.members.find(x=>x.id===id); return m?m.name:'?'; };
+  // 많이 틀린 문제
+  const wrong=(e.qs||[]).map((q,i)=>({q,i,miss:st.res.filter(r=>(r.answers||[])[i]!==q.pid).length})).filter(x=>x.miss>0).sort((a,b)=>b.miss-a.miss).slice(0,5);
+  const body=[
+    h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:langName(e.lang)+' · '+examModeName(e.mode)}),h('span',{text:e.open?T('진행 중'):T('마감')})),
+      h('div',{class:'big'},st.res.length?st.avg.toFixed(1):'-',h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+st.total})),
+      h('div',{class:'row'},h('span',{text:T('평균 점수 · 응시 ')+st.res.length+' / '+st.mem.length+T('명')}))),
+    st.notYet.length?h('div',{class:'panel',style:'padding:12px'},h('h2',{text:T('아직 안 본 단원 ')+st.notYet.length+T('명')}),h('div',{class:'who'},st.notYet.map(m=>h('span',{class:'no',text:m.name})))):null,
+    rows.length?h('div',{class:'list'},rows.map((r,i)=>h('div',{class:'row-item'},h('span',{class:'num',style:'font-weight:700;min-width:24px',text:String(i+1)}),
+      h('div',{class:'row-body'},h('span',{class:'ttl',text:name(r.member_id)}),h('span',{class:'muted',text:hm(r.finished_at)+T(' 제출')})),
+      h('span',{class:'pill'+(r.score/st.total<0.6?' warn':''),text:r.score+' / '+r.total})))):h('span',{class:'muted',text:T('아직 제출한 단원이 없습니다.')}),
+    wrong.length?h('div',{class:'panel',style:'padding:12px'},h('h2',{text:T('많이 틀린 문제')}),h('div',{class:'list'},wrong.map(x=>{ const p=PHMAP[x.q.pid]||{};
+      return h('div',{class:'row-item'},h('div',{class:'row-body'},h('span',{class:'ttl',text:p[e.lang]||''}),h('span',{class:'muted',text:meaningOf(p)})),h('span',{class:'pill warn',text:x.miss+T('명')})); }))):null,
+    h('div',{class:'actions'},
+      h('button',{class:'btn '+(e.open?'btn-navy':'btn-ghost'),type:'button',onclick:async()=>{ const r=await S.sb.from('tour_exams').update({open:!e.open}).eq('id',e.id).select().single(); if(r.error){ toast(errText(r.error)); return; } Object.assign(e,r.data); closeSheet(); toast(e.open?T('시험을 다시 열었습니다'):T('시험을 마감했습니다')); render(); }},e.open?T('시험 마감'):T('다시 열기')),
+      armButton(h('button',{class:'btn btn-ghost',type:'button'},T('시험 지우기')),T('지웁니다'),async()=>{ const r=await S.sb.from('tour_exams').delete().eq('id',e.id); if(r.error){ toast(errText(r.error)); return; } S.exams=S.exams.filter(x=>x.id!==e.id); closeSheet(); render(); }))];
+  openSheet(e.title,body);
+}
+
+// 단원: 시험 안내·응시
+function examBanner(){
+  if(!S.anon) return null;
+  const todo=openExams().filter(e=>!myResult(e.id));
+  if(!todo.length) return null;
+  const e=todo[0];
+  return h('div',{class:'banner',style:'background:var(--red-soft)'},h('span',{text:T('지도자가 낸 시험: ')+e.title+' · '+(e.qs||[]).length+T('문제')}),
+    h('button',{class:'btn btn-red',type:'button',style:'min-height:40px',onclick:()=>{ S.tab='guide'; S.guideMode='learn'; S.examRun={id:e.id,i:0,answers:[],picked:null}; render(); window.scrollTo(0,0); const q0=(e.qs||[])[0]; if(q0&&q0.mode==='listen') setTimeout(()=>sayLang((PHMAP[q0.pid]||{})[e.lang],e.lang,0.85),300); }},T('시험 보기')));
+}
+function viewExamStudent(){
+  const run=S.examRun, e=S.exams.find(x=>x.id===run.id);
+  const wrap=h('div',{class:'stack'});
+  const back=h('button',{class:'linkbtn',type:'button',style:'align-self:flex-start',onclick:()=>{ S.examRun=null; stopSpeak(); render(); }},'← '+T('레슨 목록'));
+  if(!e){ S.examRun=null; return viewLearn(); }
+  const lg=e.lang, qs=e.qs||[], res=myResult(e.id);
+  if(res||run.done){
+    const r=res||run.done, sc=r.score, tot=r.total||qs.length, ans=r.answers||run.answers;
+    wrap.append(back,h('section',{class:'hero',style:'align-items:flex-start'},h('div',{class:'row'},h('span',{text:e.title}),h('span',{text:T('제출 완료')})),
+      h('div',{class:'big'},String(sc),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+tot})),
+      h('div',{class:'row'},h('span',{text:sc/tot>=0.8?T('훌륭합니다! 현지에서 자신 있게 써 보세요'):T('틀린 문장은 레슨에서 다시 들어 보세요')}))));
+    const wrongs=qs.map((q,i)=>({q,i})).filter(x=>ans[x.i]!==x.q.pid);
+    if(wrongs.length) wrap.append(h('section',{class:'panel'},h('h2',{text:T('틀린 문제 ')+wrongs.length+T('개')}),h('div',{class:'list'},wrongs.map(x=>{ const p=PHMAP[x.q.pid]||{};
+      return h('div',{class:'row-item'},h('div',{class:'row-body'},h('span',{class:'ttl',lang:lg,text:p[lg]||''}),h('span',{class:'muted',text:meaningOf(p)+((LANG!=='en'&&p[lg+'P'])?' · ['+p[lg+'P']+']':'')})),
+        h('button',{class:'maplink',type:'button',onclick:()=>sayLang(p[lg],lg,0.9)},T('듣기'))); }))));
+    return wrap;
+  }
+  if(!e.open){ wrap.append(back,h('div',{class:'empty'},h('strong',{text:T('시험이 마감되었습니다')}),h('span',{text:T('지도자에게 문의해 주세요.')}))); return wrap; }
+  if(run.i>=qs.length){
+    const sub=h('button',{class:'btn btn-red btn-big',type:'button'},T('답안 제출하기'));
+    sub.onclick=async()=>{ sub.disabled=true; sub.textContent=T('제출하는 중…');
+      const r=await S.sb.rpc('tour_exam_submit',{p_token:S.token,p_exam:e.id,p_answers:run.answers});
+      if(r.error){ sub.disabled=false; sub.textContent=T('답안 제출하기'); toast(/exam_closed/.test(r.error.message)?T('시험이 마감되었습니다'):errText(r.error)); return; }
+      run.done={score:r.data.score,total:r.data.total,answers:run.answers}; S.exam_results.push({exam_id:e.id,...run.done}); toast(T('제출했습니다')); render(); };
+    wrap.append(back,h('section',{class:'panel'},h('h2',{text:T('모든 문제를 풀었습니다')}),h('span',{class:'muted',text:T('제출하면 고칠 수 없습니다. 점수는 바로 지도자께 전달됩니다.')}),
+      h('div',{class:'actions'},h('button',{class:'btn btn-ghost',type:'button',onclick:()=>{ run.i=0; run.picked=null; render(); }},T('처음부터 다시 보기')),sub)));
+    return wrap;
+  }
+  const q=qs[run.i], p=PHMAP[q.pid]||{}, isListen=q.mode==='listen';
+  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('span',{class:'pill',text:(run.i+1)+' / '+qs.length}),h('span',{class:'muted',text:e.title})));
+  if(isListen) sec.append(h('button',{class:'btn btn-navy btn-big',type:'button',onclick:()=>sayLang(p[lg],lg,0.85)},T('듣기')));
+  else sec.append(h('div',{class:'nplace',style:'font-size:22px;text-align:center;padding:10px 0',text:meaningOf(p)}));
+  sec.append(h('div',{class:'stack',style:'gap:8px'},q.opts.map(oid=>{ const o=PHMAP[oid]||{}, sel=run.answers[run.i]===oid;
+    return h('button',{class:'btn btn-ghost',type:'button',lang:isListen?null:lg,style:'min-height:54px;justify-content:flex-start;text-align:left;font-size:15px'+(sel?';background:var(--soft);border-color:var(--soft-ink);color:var(--soft-ink)':''),
+      onclick:()=>{ run.answers[run.i]=oid; render(); }},isListen?meaningOf(o):o[lg]); })));
+  sec.append(h('div',{class:'actions'},
+    h('button',{class:'btn btn-ghost',type:'button',disabled:run.i===0?true:null,onclick:()=>{ run.i--; render(); }},T('이전')),
+    h('button',{class:'btn btn-red',type:'button',disabled:run.answers[run.i]?null:true,onclick:()=>{ run.i++; const nq=qs[run.i]; if(nq&&nq.mode==='listen') setTimeout(()=>sayLang((PHMAP[nq.pid]||{})[lg],lg,0.85),250); render(); }},run.i+1<qs.length?T('다음'):T('답안 확인'))));
+  wrap.append(back,sec);
+  if(isListen&&!run.played){ run.played=run.i; }
+  return wrap;
 }
 
 /* ---------- 지도자: 현지어 학습 현황 ---------- */

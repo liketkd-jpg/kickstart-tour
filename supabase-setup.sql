@@ -224,7 +224,9 @@ begin
     'checks', coalesce((select json_agg(c order by c.created_at desc) from (select id, title, closed, created_at from tour_checks where tour_id = t.id order by created_at desc limit 20) c), '[]'::json),
     'marks', coalesce((select json_agg(k) from (select check_id, member_id, marked_at from tour_check_marks where member_id = m.id) k), '[]'::json),
     'guides', coalesce((select json_agg(g order by g.created_at desc) from (select id, stop_id, title, script, source_url, live_at, created_at from tour_guides where tour_id = t.id order by created_at desc limit 50) g), '[]'::json),
-    'journal', coalesce((select json_agg(j order by j.date) from (select id, date, memo, photos, brief from tour_journal where tour_id = t.id) j), '[]'::json)
+    'journal', coalesce((select json_agg(j order by j.date) from (select id, date, memo, photos, brief from tour_journal where tour_id = t.id) j), '[]'::json),
+    'exams', coalesce((select json_agg(x order by x.created_at desc) from (select id, title, lang, mode, qs, open, created_at from tour_exams where tour_id = t.id order by created_at desc limit 20) x), '[]'::json),
+    'exam_results', coalesce((select json_agg(y) from (select exam_id, score, total, answers, finished_at from tour_exam_results where member_id = m.id) y), '[]'::json)
   );
 end; $$;
 
@@ -355,3 +357,69 @@ begin
 end; $$;
 revoke all on function public.tour_set_learn(uuid, jsonb) from public;
 grant execute on function public.tour_set_learn(uuid, jsonb) to anon, authenticated;
+
+-- ───────── 지도자가 내는 현지어 시험 (5단계) ─────────
+-- 시험지는 지도자가 만들 때 문제가 정해져 모든 단원이 같은 문제를 풉니다. 채점은 서버가 하고, 한 사람당 한 번만 낼 수 있습니다.
+create table if not exists public.tour_exams (
+  id uuid primary key default gen_random_uuid(),
+  tour_id uuid not null references public.tour_tours(id) on delete cascade,
+  title text not null,
+  lang text not null,
+  mode text not null default 'meaning',
+  qs jsonb not null default '[]'::jsonb,
+  open boolean not null default true,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.tour_exam_results (
+  exam_id uuid not null references public.tour_exams(id) on delete cascade,
+  member_id uuid not null references public.tour_members(id) on delete cascade,
+  tour_id uuid not null references public.tour_tours(id) on delete cascade,
+  score int not null default 0,
+  total int not null default 0,
+  answers jsonb not null default '[]'::jsonb,
+  finished_at timestamptz not null default now(),
+  primary key (exam_id, member_id)
+);
+create index if not exists tour_exams_tour on public.tour_exams(tour_id, created_at desc);
+create index if not exists tour_exam_results_tour on public.tour_exam_results(tour_id);
+alter table public.tour_exams enable row level security;
+alter table public.tour_exam_results enable row level security;
+drop policy if exists tour_exams_owner on public.tour_exams;
+create policy tour_exams_owner on public.tour_exams for all to authenticated
+  using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
+drop policy if exists tour_exam_results_owner on public.tour_exam_results;
+create policy tour_exam_results_owner on public.tour_exam_results for all to authenticated
+  using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
+
+create or replace function public.tour_exam_submit(p_token uuid, p_exam uuid, p_answers jsonb)
+returns json language plpgsql security definer set search_path = public as $$
+declare m tour_members; e tour_exams; r tour_exam_results; n int; sc int := 0; i int;
+begin
+  select * into m from tour_members where token = p_token;
+  if m.id is null then raise exception 'bad_token'; end if;
+  select * into e from tour_exams where id = p_exam and tour_id = m.tour_id;
+  if e.id is null then raise exception 'no_exam'; end if;
+  select * into r from tour_exam_results where exam_id = e.id and member_id = m.id;
+  if r.exam_id is not null then return json_build_object('score', r.score, 'total', r.total, 'already', true); end if;
+  if not e.open then raise exception 'exam_closed'; end if;
+  if jsonb_typeof(p_answers) <> 'array' then raise exception 'bad_answers'; end if;
+  n := jsonb_array_length(e.qs);
+  for i in 0 .. n - 1 loop
+    if (p_answers ->> i) is not null and (p_answers ->> i) = (e.qs -> i ->> 'pid') then sc := sc + 1; end if;
+  end loop;
+  insert into tour_exam_results (exam_id, member_id, tour_id, score, total, answers)
+  values (e.id, m.id, m.tour_id, sc, n, p_answers);
+  return json_build_object('score', sc, 'total', n, 'already', false);
+end; $$;
+revoke all on function public.tour_exam_submit(uuid, uuid, jsonb) from public;
+grant execute on function public.tour_exam_submit(uuid, uuid, jsonb) to anon, authenticated;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['tour_exams','tour_exam_results'] loop
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
