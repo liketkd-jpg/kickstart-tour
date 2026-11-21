@@ -1,7 +1,7 @@
 // KICKSTART UP 원정 — AI 관광 해설 만들기 (Supabase Edge Function 이름: tour-guide-ai)
 // 지도자가 구글 지도 링크(또는 장소 이름)를 넣고 「AI 해설 만들기」를 누르면,
 // 구글 제미나이(Gemini)가 학생용 이어폰 해설 글을 써서 돌려줍니다. 저장은 지도자가 읽어 본 뒤 직접 합니다.
-// 필요한 비밀 값(Secrets): GEMINI_API_KEY  (선택: GEMINI_MODEL — 비워 두면 gemini-2.5-flash)
+// 필요한 비밀 값(Secrets): GEMINI_API_KEY  (선택: GEMINI_MODEL — 비워 두면 쓸 수 있는 flash 모델을 자동으로 고름)
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
 const cors = {
@@ -47,41 +47,87 @@ const PROMPT = (place: string, lang: string) => lang === 'en'
   ? `Write an audio-guide script about "${place}" for middle/high-school members of a Korean taekwondo demonstration team, to be read aloud through earphones. About 2-3 minutes (around 350 words), friendly and polite, short sentences that are easy to read aloud. Include one or two pieces of history, must-see spots, one fun story, and good photo spots. Only state facts you are sure of. No headings, no bullet points, no emoji. Also give the place's common English name as title.`
   : `태권도 시범단 중고등학생 단원들에게 이어폰으로 들려줄 「${place}」 관광 해설을 써 줘. 2~3분 분량(700자 안팎), 쉬운 존댓말, 소리 내어 읽기 좋게 짧은 문장으로. 역사 한두 가지, 꼭 볼 것, 재미있는 이야기 하나, 사진 찍기 좋은 곳을 넣어 줘. 확실히 아는 사실만 쓰고, 제목·번호·기호·이모지 없이 해설 글만 써 줘. title에는 그 장소의 한국어 이름을 넣어 줘.`;
 
-async function gemini(place: string, lang: string) {
-  const key = Deno.env.get('GEMINI_API_KEY');
-  if (!key) return { error: 'no_key' };
-  const models = [Deno.env.get('GEMINI_MODEL'), 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'].filter(Boolean) as string[];
-  let last = '';
-  for (const model of [...new Set(models)]) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: PROMPT(place, lang) }] }],
-        generationConfig: {
-          temperature: 0.6,
-          maxOutputTokens: 4096,
-          responseMimeType: 'application/json',
-          responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, script: { type: 'STRING' } }, required: ['title', 'script'] },
-        },
-      }),
-    });
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+
+// 이 열쇠로 쓸 수 있는 제미나이 모델 목록에서 글쓰기용 flash 모델을 골라 냄 (모델 이름이 바뀌어도 자동으로 따라감)
+async function pickModels(key: string): Promise<{ models: string[]; err?: string }> {
+  const fixed = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-2.0-flash'];
+  const want = Deno.env.get('GEMINI_MODEL');
+  try {
+    const r = await fetch(`${API}/models?pageSize=200`, { headers: { 'x-goog-api-key': key }, signal: AbortSignal.timeout(15000) });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      last = d?.error?.status || String(r.status);
-      if (r.status === 404 || r.status === 400 && /model/i.test(d?.error?.message || '')) continue; // 그 모델이 없으면 다음 모델로
-      if (r.status === 429) return { error: 'quota' };
-      if (r.status === 400 || r.status === 403) return { error: 'bad_key', detail: d?.error?.message };
-      continue;
-    }
-    const text = (d?.candidates?.[0]?.content?.parts || []).map((p: { text?: string }) => p.text || '').join('');
-    try {
-      const o = JSON.parse(text);
-      if (o?.script) return { title: String(o.title || place).slice(0, 60), script: String(o.script).trim().slice(0, 6000), model };
-    } catch { if (text.trim()) return { title: place, script: text.trim().slice(0, 6000), model }; }
-    last = 'empty';
+    if (!r.ok) return { models: [], err: `${r.status} ${d?.error?.status || ''} ${(d?.error?.message || '').slice(0, 120)}` };
+    const names: string[] = (d.models || [])
+      .filter((m: { supportedGenerationMethods?: string[] }) => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map((m: { name: string }) => m.name.replace(/^models\//, ''))
+      .filter((n: string) => /flash/.test(n) && !/lite|image|tts|audio|live|embed|vision|thinking-exp|native|8b/.test(n));
+    const score = (n: string) => {
+      const v = parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || '0');
+      const stable = /preview|exp/.test(n) ? 0 : 1;
+      const latest = n === 'gemini-flash-latest' ? 1 : 0;
+      return latest * 1000 + stable * 100 + v;
+    };
+    names.sort((x, y) => score(y) - score(x));
+    return { models: [...new Set([want, ...names, ...fixed].filter(Boolean) as string[])] };
+  } catch (e) {
+    return { models: [...new Set([want, ...fixed].filter(Boolean) as string[])], err: 'list ' + String(e).slice(0, 80) };
   }
-  return { error: 'ai_failed', detail: last };
+}
+
+async function gemini(place: string, lang: string) {
+  const key = (Deno.env.get('GEMINI_API_KEY') || '').trim();
+  if (!key) return { error: 'no_key' };
+  const { models, err } = await pickModels(key);
+  if (!models.length) {
+    if (/^(400|401|403)/.test(err || '')) return { error: 'bad_key', detail: err };
+    return { error: 'ai_failed', detail: err };
+  }
+  const notes: string[] = err ? [err] : [];
+  let quota = false;
+  for (const model of models.slice(0, 5)) {
+    for (const jsonMode of [true, false]) {
+      const cfg: Record<string, unknown> = { temperature: 0.6, maxOutputTokens: 16384 };
+      if (jsonMode) {
+        cfg.responseMimeType = 'application/json';
+        cfg.responseSchema = { type: 'OBJECT', properties: { title: { type: 'STRING' }, script: { type: 'STRING' } }, required: ['title', 'script'] };
+      }
+      const prompt = PROMPT(place, lang) + (jsonMode ? '' : (lang === 'en' ? ' Put only the title on the first line, then the script.' : ' 첫 줄에는 장소 이름만 쓰고, 다음 줄부터 해설을 써 줘.'));
+      let r: Response;
+      try {
+        r = await fetch(`${API}/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: cfg }),
+          signal: AbortSignal.timeout(50000),
+        });
+      } catch (e) { notes.push(`${model}: ${String(e).slice(0, 60)}`); break; }
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg = `${model}: ${r.status} ${(d?.error?.message || '').slice(0, 100)}`;
+        notes.push(msg);
+        if (r.status === 401 || (r.status === 400 && /api key|API_KEY/i.test(d?.error?.message || '')) || (r.status === 403 && /key|permission|denied/i.test(d?.error?.message || ''))) return { error: 'bad_key', detail: msg };
+        if (r.status === 429) { quota = true; break; }           // 이 모델 사용량 끝 → 다음 모델
+        if (r.status === 400 && jsonMode) continue;                // 설정이 안 맞으면 일반 글 방식으로 다시
+        break;                                                      // 404·500·503 → 다음 모델
+      }
+      const c = d?.candidates?.[0];
+      const text = (c?.content?.parts || []).filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text || '').join('').trim();
+      if (!text) { notes.push(`${model}: empty ${c?.finishReason || d?.promptFeedback?.blockReason || ''}`); if (jsonMode) continue; break; }
+      if (jsonMode) {
+        try {
+          const o = JSON.parse(text);
+          if (o?.script) return { title: String(o.title || place).slice(0, 60), script: String(o.script).trim().slice(0, 6000), model };
+        } catch { /* 일반 글 방식으로 다시 */ }
+        notes.push(`${model}: bad json ${c?.finishReason || ''}`);
+        continue;
+      }
+      const lines = text.replace(/^[#*\s]+/, '').split('\n');
+      const title = lines[0].replace(/[#*「」"]/g, '').trim();
+      const script = lines.slice(1).join('\n').replace(/[#*]/g, '').trim();
+      return { title: (script ? title : place).slice(0, 60), script: (script || text).slice(0, 6000), model };
+    }
+  }
+  return { error: quota ? 'quota' : 'ai_failed', detail: notes.slice(-4).join(' | ').slice(0, 400) };
 }
 
 Deno.serve(async (req) => {

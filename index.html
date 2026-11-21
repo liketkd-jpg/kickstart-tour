@@ -344,6 +344,7 @@ const EN={'일':"Sun",
 '구글 지도 링크':"Google Maps link",
 '구글 지도에서 「공유 → 링크 복사」 후 붙여 넣기':"In Google Maps: Share → Copy link, then paste",
 'AI 해설 만들기':"Write guide with AI",
+'자세한 내용':"Details",
 '구글 지도 링크나 장소 이름을 넣어 주세요':"Enter a Google Maps link or a place name.",
 'AI가 해설을 쓰는 중… (10~30초)':"AI is writing… (10–30 s)",
 'AI 서버가 아직 준비되지 않았습니다. 설정 안내대로 tour-guide-ai를 만들어 주세요':"The AI server isn't set up yet. Deploy tour-guide-ai as described in the setup guide.",
@@ -1189,13 +1190,15 @@ function guideSheet(g){
   const mapIn=h('input',{class:'in',inputmode:'url',placeholder:T('구글 지도에서 「공유 → 링크 복사」 후 붙여 넣기'),value:/google|goo\.gl/.test(g.source_url||'')?g.source_url:''});
   let titleAuto=false; mapIn.oninput=()=>{ const n=mapsName(mapIn.value.trim()); if(n&&(!title.value.trim()||titleAuto)){ title.value=n.slice(0,60); titleAuto=true; } }; title.addEventListener('input',()=>{ titleAuto=false; });
   const ai=h('button',{class:'btn btn-red wide',type:'button'},'✦ '+T('AI 해설 만들기'));
+  const aiErr=h('div',{class:'banner',hidden:true,style:'font-size:13px;line-height:1.5;word-break:break-all'});
+  const showErr=(m,det)=>{ toast(m); aiErr.hidden=false; aiErr.textContent=m+(det?'\n['+T('자세한 내용')+'] '+det:''); aiErr.style.whiteSpace='pre-wrap'; };
   ai.onclick=async()=>{ const link=mapIn.value.trim(), q=titleAuto?'':title.value.trim(); const input=link||q;
     if(!input){ toast(T('구글 지도 링크나 장소 이름을 넣어 주세요')); mapIn.focus(); return; }
     if(script.value.trim()&&!confirmReplace()) return;
-    ai.disabled=true; ai.textContent=T('AI가 해설을 쓰는 중… (10~30초)');
+    ai.disabled=true; aiErr.hidden=true; ai.textContent=T('AI가 해설을 쓰는 중… (10~30초)');
     try{ const {data,error}=await S.sb.functions.invoke('tour-guide-ai',{body:{tour_id:S.tour.id,input:link&&q?link+' '+q:input,lang:LANG}});
-      if(error||!data){ toast(T('AI 서버가 아직 준비되지 않았습니다. 설정 안내대로 tour-guide-ai를 만들어 주세요')); return; }
-      if(data.error){ toast(T(AI_ERR[data.error]||'AI가 글을 쓰지 못했습니다. 잠시 뒤 다시 해 보세요')); return; }
+      if(error||!data){ let det=String(error&&error.message||''); try{ const b=error&&error.context&&await error.context.text(); if(b) det+=' '+b.slice(0,200); }catch(e){} showErr(T('AI 서버가 아직 준비되지 않았습니다. 설정 안내대로 tour-guide-ai를 만들어 주세요'),det); return; }
+      if(data.error){ showErr(T(AI_ERR[data.error]||'AI가 글을 쓰지 못했습니다. 잠시 뒤 다시 해 보세요'),data.detail||(AI_ERR[data.error]?'':data.error)); return; }
       script.value=data.script; if(!q&&data.title){ title.value=data.title.slice(0,60); titleAuto=false; }
       if(link){ srcUrl=link; src.textContent=srcLabel(link); } else { srcUrl=''; src.textContent=''; }
       src.textContent=(src.textContent?src.textContent+' · ':'')+T('AI가 쓴 글 — 연도·이름을 한 번 확인해 주세요'); upd();
@@ -1223,7 +1226,7 @@ function guideSheet(g){
   const acts=h('div',{class:'actions'},prev,h('span'),save);
   if(g.id) acts.append(armButton(h('button',{class:'btn btn-ghost wide',type:'button'},T('이 해설 삭제')),T('삭제됩니다'),async()=>{ const r=await S.sb.from('tour_guides').delete().eq('id',g.id); if(r.error) toast(errText(r.error)); else { stopSpeak(); closeSheet(); toast(T('해설을 삭제했습니다')); reloadSoon('guides'); } }));
   openSheet(g.id?T('해설 고치기'):T('해설 만들기'),[h('label',{class:'f'},T('구글 지도 링크'),mapIn),h('label',{class:'f'},T('장소 이름'),title),h('label',{class:'f'},T('연결할 일정'),stopSel),
-    ai, h('div',{class:'actions'},wiki,ask), h('label',{class:'f'},T('해설 글'),script), h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},count,src), acts]);
+    ai, aiErr, h('div',{class:'actions'},wiki,ask), h('label',{class:'f'},T('해설 글'),script), h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},count,src), acts]);
 }
 function rateChips(){
   return h('div',{class:'catsel',role:'group','aria-label':T('읽는 빠르기')},[['0.85',T('천천히')],['1',T('보통')],['1.2',T('빠르게')]].map(([v,l])=>h('button',{type:'button','aria-pressed':String(S.rate===Number(v)),onclick:()=>{ S.rate=Number(v); store.set('ttsRate',v); render(); }},l)));
