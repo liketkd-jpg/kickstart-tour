@@ -1,5 +1,5 @@
 // KICKSTART UP 원정 — 인터넷이 약한 곳에서도 앱 화면이 열리게 저장해 둡니다.
-const CACHE = 'tour-v9';
+const CACHE='tour-v10';
 const SHELL = ['./', './index.html', './config.js', './manifest.webmanifest',
   './vendor/supabase.js', './vendor/591.supabase.js', './vendor/qrcode.js', './phrases.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-180.png'];

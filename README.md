@@ -11,3 +11,10 @@
 1. 대회 접수용 Supabase 프로젝트 → SQL Editor에서 `supabase-setup.sql` 실행 (표 이름이 모두 `tour_`로 시작해 대회 자료와 섞이지 않음)
 2. `config.js`에 Project URL과 공개용(publishable/anon) 키
 3. GitHub 저장소 Settings → Pages → Branch `main` / `/ (root)` 저장
+
+## AI 해설 자동 만들기 (구글 제미나이, 무료 사용량 안)
+
+1. https://aistudio.google.com/apikey 에서 구글 계정으로 들어가 **Create API key** → 열쇠 복사
+2. Supabase → Edge Functions → Secrets 에 `GEMINI_API_KEY` = 복사한 열쇠
+3. Supabase → Edge Functions → Deploy a new function → Via Editor → 이름 `tour-guide-ai`, 내용은 `supabase/functions/tour-guide-ai/index.ts`
+4. 앱 → 가이드 → 해설 만들기 → 구글 지도 링크 붙여 넣기 → 「AI 해설 만들기」

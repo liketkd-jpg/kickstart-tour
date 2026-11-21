@@ -340,6 +340,23 @@ const EN={'일':"Sun",
 '출처: 위키백과 「':"Source: Wikipedia “",
 '가져왔습니다. 읽기 쉽게 고쳐 주세요':"Fetched. Please edit it so it's easy to listen to.",
 'Claude에게 부탁할 글 복사':"Copy a request for Claude",
+'구글 지도에서 보기':"View on Google Maps",
+'구글 지도 링크':"Google Maps link",
+'구글 지도에서 「공유 → 링크 복사」 후 붙여 넣기':"In Google Maps: Share → Copy link, then paste",
+'AI 해설 만들기':"Write guide with AI",
+'구글 지도 링크나 장소 이름을 넣어 주세요':"Enter a Google Maps link or a place name.",
+'AI가 해설을 쓰는 중… (10~30초)':"AI is writing… (10–30 s)",
+'AI 서버가 아직 준비되지 않았습니다. 설정 안내대로 tour-guide-ai를 만들어 주세요':"The AI server isn't set up yet. Deploy tour-guide-ai as described in the setup guide.",
+'AI가 글을 쓰지 못했습니다. 잠시 뒤 다시 해 보세요':"The AI couldn't write it. Please try again shortly.",
+'AI 열쇠가 아직 없습니다. 수파베이스 비밀 열쇠에 GEMINI_API_KEY를 넣어 주세요':"No AI key yet. Add GEMINI_API_KEY to Supabase secrets.",
+'AI 열쇠가 맞지 않습니다. GEMINI_API_KEY를 다시 확인해 주세요':"The AI key is invalid. Check GEMINI_API_KEY.",
+'오늘 무료 사용량을 다 썼습니다. 잠시 뒤나 내일 다시 해 보세요':"Today's free quota is used up. Try again later or tomorrow.",
+'링크에서 장소를 찾지 못했습니다. 장소 이름을 직접 넣어 주세요':"Couldn't find a place in the link. Type the place name.",
+'이 원정의 지도자만 쓸 수 있습니다':"Only this tour's leader can use this.",
+'다시 로그인해 주세요':"Please sign in again.",
+'AI가 쓴 글 — 연도·이름을 한 번 확인해 주세요':"Written by AI — please check dates and names",
+'해설이 만들어졌습니다. 읽어 보고 저장해 주세요':"Guide written. Read it over, then save.",
+'지금 글이 바뀝니다. 한 번 더 누르면 새로 씁니다':"This will replace the current text. Tap again to rewrite.",
 '이 장소':"this place",
 '태권도 시범단 중고등학생 단원들에게 이어폰으로 들려줄 「':"Write an audio guide about “",
 '」 관광 해설을 써 줘. 2~3분 분량(700자 안팎), 쉬운 존댓말, 소리 내어 읽기 좋게 짧은 문장으로. 역사 한두 가지, 꼭 볼 것, 재미있는 이야기 하나, 사진 찍기 좋은 곳을 넣어 줘. 해설 글만 써 줘.':"” for middle and high school taekwondo team members to hear on earphones. About 2–3 minutes (around 350 words), simple and friendly, short sentences that are easy to read aloud. Include one or two bits of history, what not to miss, one fun story, and a good photo spot. Write only the guide text.",
@@ -369,7 +386,7 @@ const EN={'일':"Sun",
 '멈추기':"Stop",
 '이어폰 끼고 듣기':"Put on earphones and listen",
 '아직 해설이 없습니다':"No guides yet",
-'「해설 만들기」에서 장소 이름을 넣고 위키백과 설명을 가져오거나, Claude에게 해설을 부탁해 붙여 넣으세요.':"In “Create guide”, enter a place name and fetch the Wikipedia description, or ask Claude to write one and paste it in.",
+'「해설 만들기」에 구글 지도 링크를 붙여 넣고 「AI 해설 만들기」를 누르세요. 위키백과 설명을 가져와도 됩니다.':"In “Create guide”, paste a Google Maps link and tap “Write guide with AI”. You can also fetch the Wikipedia description.",
 '지도자가 해설을 만들면 여기에서 들을 수 있습니다.':"Guides from your leader can be played here.",
 '약 ':"About ",
 '접기':"Collapse",
@@ -1159,12 +1176,33 @@ async function wikiIntro(q){
   const pg=Object.values((e&&e.query&&e.query.pages)||{})[0]; if(!pg||!pg.extract) return null;
   return {title:pg.title, text:pg.extract.replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim(), url:'https://'+(LANG==='en'?'en':'ko')+'.wikipedia.org/wiki/'+encodeURIComponent(pg.title.replace(/ /g,'_'))};
 }
+function srcLabel(u){ return /wikipedia\.org/.test(u||'')?T('출처: 위키백과'):T('구글 지도에서 보기'); }
+function mapsName(u){ try{ const x=new URL(u); const m=x.pathname.match(/\/place\/([^/]+)/)||x.pathname.match(/\/search\/([^/]+)/);
+  let n=m?m[1]:(x.searchParams.get('q')||x.searchParams.get('query')||''); n=decodeURIComponent(n.replace(/\+/g,' ')).trim(); return /^-?\d+\.\d+,/.test(n)?'':n; }catch(e){ return ''; } }
+const AI_ERR={no_key:'AI 열쇠가 아직 없습니다. 수파베이스 비밀 열쇠에 GEMINI_API_KEY를 넣어 주세요',bad_key:'AI 열쇠가 맞지 않습니다. GEMINI_API_KEY를 다시 확인해 주세요',quota:'오늘 무료 사용량을 다 썼습니다. 잠시 뒤나 내일 다시 해 보세요',no_place:'링크에서 장소를 찾지 못했습니다. 장소 이름을 직접 넣어 주세요',empty:'구글 지도 링크나 장소 이름을 넣어 주세요',not_owner:'이 원정의 지도자만 쓸 수 있습니다',not_signed_in:'다시 로그인해 주세요',ai_failed:'AI가 글을 쓰지 못했습니다. 잠시 뒤 다시 해 보세요'};
 function guideSheet(g){
   const title=h('input',{class:'in',value:g.title||'',placeholder:T('예: 프라하성')});
   const stopSel=h('select',{class:'in'},h('option',{value:''},T('연결 안 함')),
     [...S.stops].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).map(s=>h('option',{value:s.id,selected:g.stop_id===s.id||null},dayLabel(s.date)+' · '+s.title)));
   const script=h('textarea',{class:'in',style:'min-height:220px;line-height:1.7',placeholder:T('해설 글을 쓰거나, 아래 단추로 위키백과 설명을 가져오세요.')}); script.value=g.script||'';
-  const src=h('span',{class:'muted',text:g.source_url?T('출처: 위키백과'):''}); let srcUrl=g.source_url||'';
+  const src=h('span',{class:'muted',text:g.source_url?srcLabel(g.source_url):''}); let srcUrl=g.source_url||'';
+  const mapIn=h('input',{class:'in',inputmode:'url',placeholder:T('구글 지도에서 「공유 → 링크 복사」 후 붙여 넣기'),value:/google|goo\.gl/.test(g.source_url||'')?g.source_url:''});
+  let titleAuto=false; mapIn.oninput=()=>{ const n=mapsName(mapIn.value.trim()); if(n&&(!title.value.trim()||titleAuto)){ title.value=n.slice(0,60); titleAuto=true; } }; title.addEventListener('input',()=>{ titleAuto=false; });
+  const ai=h('button',{class:'btn btn-red wide',type:'button'},'✦ '+T('AI 해설 만들기'));
+  ai.onclick=async()=>{ const link=mapIn.value.trim(), q=titleAuto?'':title.value.trim(); const input=link||q;
+    if(!input){ toast(T('구글 지도 링크나 장소 이름을 넣어 주세요')); mapIn.focus(); return; }
+    if(script.value.trim()&&!confirmReplace()) return;
+    ai.disabled=true; ai.textContent=T('AI가 해설을 쓰는 중… (10~30초)');
+    try{ const {data,error}=await S.sb.functions.invoke('tour-guide-ai',{body:{tour_id:S.tour.id,input:link&&q?link+' '+q:input,lang:LANG}});
+      if(error||!data){ toast(T('AI 서버가 아직 준비되지 않았습니다. 설정 안내대로 tour-guide-ai를 만들어 주세요')); return; }
+      if(data.error){ toast(T(AI_ERR[data.error]||'AI가 글을 쓰지 못했습니다. 잠시 뒤 다시 해 보세요')); return; }
+      script.value=data.script; if(!q&&data.title){ title.value=data.title.slice(0,60); titleAuto=false; }
+      if(link){ srcUrl=link; src.textContent=srcLabel(link); } else { srcUrl=''; src.textContent=''; }
+      src.textContent=(src.textContent?src.textContent+' · ':'')+T('AI가 쓴 글 — 연도·이름을 한 번 확인해 주세요'); upd();
+      toast(T('해설이 만들어졌습니다. 읽어 보고 저장해 주세요'));
+    }catch(e){ toast(T('인터넷 연결을 확인해 주세요')); }
+    finally{ ai.disabled=false; ai.textContent='✦ '+T('AI 해설 만들기'); } };
+  let replaceArmed=0; const confirmReplace=()=>{ if(Date.now()-replaceArmed<4000) return true; replaceArmed=Date.now(); toast(T('지금 글이 바뀝니다. 한 번 더 누르면 새로 씁니다')); return false; };
   const count=h('span',{class:'muted'}); const upd=()=>{ const n=script.value.length; count.textContent=n+T('자 · 약 ')+Math.max(1,Math.round(n/280))+T('분'); }; script.oninput=upd; upd();
   const wiki=h('button',{class:'btn btn-navy',type:'button'},T('위키백과에서 가져오기'));
   wiki.onclick=async()=>{ const q=title.value.trim(); if(!q){ toast(T('장소 이름을 먼저 넣어 주세요')); title.focus(); return; }
@@ -1184,8 +1222,8 @@ function guideSheet(g){
     if(r.error){ toast(errText(r.error)); return; } stopSpeak(); closeSheet(); toast(T('해설을 저장했습니다')); reloadSoon('guides'); };
   const acts=h('div',{class:'actions'},prev,h('span'),save);
   if(g.id) acts.append(armButton(h('button',{class:'btn btn-ghost wide',type:'button'},T('이 해설 삭제')),T('삭제됩니다'),async()=>{ const r=await S.sb.from('tour_guides').delete().eq('id',g.id); if(r.error) toast(errText(r.error)); else { stopSpeak(); closeSheet(); toast(T('해설을 삭제했습니다')); reloadSoon('guides'); } }));
-  openSheet(g.id?T('해설 고치기'):T('해설 만들기'),[h('label',{class:'f'},T('장소 이름'),title),h('label',{class:'f'},T('연결할 일정'),stopSel),
-    h('div',{class:'actions'},wiki,ask), h('label',{class:'f'},T('해설 글'),script), h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},count,src), acts]);
+  openSheet(g.id?T('해설 고치기'):T('해설 만들기'),[h('label',{class:'f'},T('구글 지도 링크'),mapIn),h('label',{class:'f'},T('장소 이름'),title),h('label',{class:'f'},T('연결할 일정'),stopSel),
+    ai, h('div',{class:'actions'},wiki,ask), h('label',{class:'f'},T('해설 글'),script), h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},count,src), acts]);
 }
 function rateChips(){
   return h('div',{class:'catsel',role:'group','aria-label':T('읽는 빠르기')},[['0.85',T('천천히')],['1',T('보통')],['1.2',T('빠르게')]].map(([v,l])=>h('button',{type:'button','aria-pressed':String(S.rate===Number(v)),onclick:()=>{ S.rate=Number(v); store.set('ttsRate',v); render(); }},l)));
@@ -1204,7 +1242,7 @@ function viewGuide(){
   }
   if(L()) wrap.append(h('button',{class:'btn btn-red',type:'button',onclick:()=>guideSheet({stop_id:null})},T('해설 만들기')));
   wrap.append(h('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap'},h('span',{class:'muted',text:T('읽는 빠르기')}),rateChips()));
-  if(!S.guides.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:T('아직 해설이 없습니다')}),h('span',{text:L()?T('「해설 만들기」에서 장소 이름을 넣고 위키백과 설명을 가져오거나, Claude에게 해설을 부탁해 붙여 넣으세요.'):T('지도자가 해설을 만들면 여기에서 들을 수 있습니다.')}))); return wrap; }
+  if(!S.guides.length){ wrap.append(h('div',{class:'empty'},h('strong',{text:T('아직 해설이 없습니다')}),h('span',{text:L()?T('「해설 만들기」에 구글 지도 링크를 붙여 넣고 「AI 해설 만들기」를 누르세요. 위키백과 설명을 가져와도 됩니다.'):T('지도자가 해설을 만들면 여기에서 들을 수 있습니다.')}))); return wrap; }
   const list=[...S.guides].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   if(S.openGuide){ const i=list.findIndex(g=>g.id===S.openGuide); if(i>0) list.unshift(list.splice(i,1)[0]); }
   list.forEach(g=>{
@@ -1220,7 +1258,7 @@ function viewGuide(){
       acts.append(h('button',{class:'btn btn-ghost wide',type:'button',style:'min-height:40px;font-size:13px',onclick:()=>guideSheet(g)},T('고치기')));
     }
     card.append(acts);
-    if(g.source_url) card.append(h('a',{class:'muted',href:g.source_url,target:'_blank',rel:'noopener'},T('출처: 위키백과')));
+    if(g.source_url) card.append(h('a',{class:'muted',href:g.source_url,target:'_blank',rel:'noopener'},srcLabel(g.source_url)));
     wrap.append(card);
   });
   return wrap;
