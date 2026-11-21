@@ -111,6 +111,7 @@ alter table public.tour_members add column if not exists health text not null de
 alter table public.tour_members add column if not exists guardian text not null default '';
 alter table public.tour_members add column if not exists passport_tail text not null default '';
 alter table public.tour_members add column if not exists packed jsonb not null default '[]'::jsonb;
+alter table public.tour_members add column if not exists learn jsonb not null default '{}'::jsonb;
 
 create table if not exists public.tour_cues (
   id uuid primary key default gen_random_uuid(),
@@ -214,7 +215,7 @@ begin
   select * into t from tour_tours where id = m.tour_id;
   return json_build_object(
     'tour', json_build_object('id', t.id, 'name', t.name, 'code', t.code, 'start_date', t.start_date, 'end_date', t.end_date, 'emergency', t.emergency, 'checklist', t.checklist),
-    'me', json_build_object('id', m.id, 'name', m.name, 'grp', m.grp, 'room', m.room, 'seat', m.seat, 'health', m.health, 'guardian', m.guardian, 'packed', m.packed),
+    'me', json_build_object('id', m.id, 'name', m.name, 'grp', m.grp, 'room', m.room, 'seat', m.seat, 'health', m.health, 'guardian', m.guardian, 'packed', m.packed, 'learn', m.learn),
     'roommates', coalesce((select json_agg(r.name order by r.name) from tour_members r where r.tour_id = t.id and m.room <> '' and r.room = m.room and r.id <> m.id), '[]'::json),
     'cues', coalesce((select json_agg(c order by c.seq, c.created_at) from (select id, stop_id, seq, title, music, who, props, duration, created_at from tour_cues where tour_id = t.id) c), '[]'::json),
     'stops', coalesce((select json_agg(s order by s.date, s.time) from (select id, date, time, type, title, place, city, contact, memo, done from tour_stops where tour_id = t.id) s), '[]'::json),
@@ -343,3 +344,14 @@ begin
 end; $$;
 revoke all on function public.tour_push_subscribe(uuid, text, text, text) from public;
 grant execute on function public.tour_push_subscribe(uuid, text, text, text) to anon, authenticated;
+
+-- ───────── 현지어 학습 기록 (4단계) ─────────
+-- 단원 휴대폰의 레슨 통과·퀴즈·발음 점수를 지도자 화면에서 볼 수 있게 저장합니다.
+create or replace function public.tour_set_learn(p_token uuid, p_learn jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if jsonb_typeof(p_learn) <> 'object' or length(p_learn::text) > 20000 then raise exception 'bad_learn'; end if;
+  update tour_members set learn = p_learn where token = p_token;
+end; $$;
+revoke all on function public.tour_set_learn(uuid, jsonb) from public;
+grant execute on function public.tour_set_learn(uuid, jsonb) to anon, authenticated;

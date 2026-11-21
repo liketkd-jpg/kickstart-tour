@@ -13,7 +13,8 @@ window.TOUR_PHRASES = {
     { id: 'way', ko: '길·교통', en: 'Directions & Transport' },
     { id: 'shop', ko: '쇼핑', en: 'Shopping' },
     { id: 'hotel', ko: '숙소', en: 'Hotel' },
-    { id: 'help', ko: '긴급·도움', en: 'Emergency & Help' }
+    { id: 'help', ko: '긴급·도움', en: 'Emergency & Help' },
+    { id: 'term', ko: '태권도 용어', en: 'Taekwondo terms' }
   ],
   list: [
     { id: 'g1', cat: 'greet', ko: '안녕하세요', en: 'Hello!', enP: '헬로', de: 'Hallo! / Guten Tag!', deP: '할로 / 구텐 타크', cs: 'Dobrý den!', csP: '도브리 덴' },
@@ -73,6 +74,47 @@ window.TOUR_PHRASES = {
     { id: 'e5', cat: 'help', ko: '병원은 어디예요?', en: 'Where is the hospital?', enP: '웨어 이즈 더 하스피털', de: 'Wo ist das Krankenhaus?', deP: '보 이스트 다스 크랑켄하우스', cs: 'Kde je nemocnice?', csP: '그데 예 네모츠니체' },
     { id: 'e6', cat: 'help', ko: '여권을 잃어버렸어요', en: 'I lost my passport.', enP: '아이 로스트 마이 패스포트', de: 'Ich habe meinen Pass verloren.', deP: '이히 하베 마이넨 파스 페어로렌', cs: 'Ztratil(a) jsem pas.', csP: '스트라틸(라) 이셈 파스' },
     { id: 'e7', cat: 'help', ko: '천천히 말씀해 주세요', en: 'Please speak slowly.', enP: '플리즈 스픽 슬로울리', de: 'Bitte langsam sprechen.', deP: '비테 랑잠 슈프레헨', cs: 'Mluvte pomalu, prosím.', csP: '믈루브테 포말루 프로심' },
-    { id: 'e8', cat: 'help', ko: '영어 할 줄 아세요?', en: 'Do you speak English?', enP: '두 유 스픽 잉글리시', de: 'Sprechen Sie Englisch?', deP: '슈프레헨 지 엥글리시', cs: 'Mluvíte anglicky?', csP: '믈루비테 앙글리츠키' }
+    { id: 'e8', cat: 'help', ko: '영어 할 줄 아세요?', en: 'Do you speak English?', enP: '두 유 스픽 잉글리시', de: 'Sprechen Sie Englisch?', deP: '슈프레헨 지 엥글리시', cs: 'Mluvíte anglicky?', csP: '믈루비테 앙글리츠키' },
+    { id: 'a1', cat: 'way', ko: '여권 여기 있어요', en: 'Here is my passport.', enP: '히어 이즈 마이 패스포트', de: 'Hier ist mein Pass.', deP: '히어 이스트 마인 파스', cs: 'Tady je můj pas.', csP: '타디 예 무이 파스' },
+    { id: 'a2', cat: 'way', ko: '탑승구는 어디예요?', en: 'Where is the gate?', enP: '웨어 이즈 더 게이트', de: 'Wo ist das Gate?', deP: '보 이스트 다스 게이트', cs: 'Kde je brána?', csP: '그데 예 브라나' },
+    { id: 'a3', cat: 'way', ko: '짐 찾는 곳은 어디예요?', en: 'Where is baggage claim?', enP: '웨어 이즈 배기지 클레임', de: 'Wo ist die Gepäckausgabe?', deP: '보 이스트 디 게패크아우스가베', cs: 'Kde je výdej zavazadel?', csP: '그데 예 비데이 자바자델' },
+    { id: 'a4', cat: 'way', ko: '제 가방이 안 나왔어요', en: "My bag didn't arrive.", enP: '마이 백 디든트 어라이브', de: 'Mein Koffer ist nicht angekommen.', deP: '마인 코퍼 이스트 니히트 안게코멘', cs: 'Můj kufr nepřiletěl.', csP: '무이 쿠프르 네프르질레톌' },
+    { id: 'a5', cat: 'way', ko: '태권도 공연하러 왔어요', en: "I'm here for a taekwondo performance.", enP: '아임 히어 포 어 태권도 퍼포먼스', de: 'Ich bin für eine Taekwondo-Vorführung hier.', deP: '이히 빈 퓌어 아이네 태권도 포어퓌룽 히어', cs: 'Jsem tu kvůli vystoupení taekwonda.', csP: '이셈 투 크불리 비스토우페니 태권다' },
+
+    { id: 'k1', cat: 'show', ko: '저는 태권도 3단이에요', en: "I'm a 3rd-degree black belt in taekwondo.", enP: '아임 어 써드 디그리 블랙 벨트 인 태권도', de: 'Ich habe den dritten Dan im Taekwondo.', deP: '이히 하베 덴 드리텐 단 임 태권도', cs: 'Mám třetí dan v taekwondu.', csP: '맘 트르제티 단 프 태권두' },
+    { id: 'k2', cat: 'show', ko: '10년 동안 태권도를 했어요', en: "I've been doing taekwondo for ten years.", enP: '아이브 빈 두잉 태권도 포 텐 이어즈', de: 'Ich mache seit zehn Jahren Taekwondo.', deP: '이히 마헤 자이트 체엔 야렌 태권도', cs: 'Dělám taekwondo deset let.', csP: '델람 태권도 데세트 레트' },
+    { id: 'k3', cat: 'show', ko: '제 종목은 품새예요', en: 'My event is poomsae (forms).', enP: '마이 이벤트 이즈 품새 (폼즈)', de: 'Meine Disziplin ist Poomsae (Formenlauf).', deP: '마이네 디스치플린 이스트 품새 (포르멘라우프)', cs: 'Moje disciplína je poomsae (sestavy).', csP: '모예 디스치플리나 예 품새 (세스타비)' },
+    { id: 'k4', cat: 'show', ko: '저는 격파를 잘해요', en: "I'm good at breaking.", enP: '아임 굿 앳 브레이킹', de: 'Ich bin gut im Bruchtest.', deP: '이히 빈 구트 임 브루흐테스트', cs: 'Jsem dobrý(á) v přerážení.', csP: '이셈 도브리(아) 프 프르제라제니' },
+    { id: 'k5', cat: 'show', ko: '저는 대학교에서 태권도를 전공해요', en: 'I major in taekwondo at university.', enP: '아이 메이저 인 태권도 앳 유니버시티', de: 'Ich studiere Taekwondo an der Universität.', deP: '이히 슈투디레 태권도 안 데어 우니베르지테트', cs: 'Studuju taekwondo na univerzitě.', csP: '스투두유 태권도 나 우니베르지톄' },
+    { id: 'k6', cat: 'show', ko: '몇 단이에요?', en: 'What dan are you?', enP: '왓 단 아 유', de: 'Welchen Dan hast du?', deP: '벨헨 단 하스트 두', cs: 'Jaký máš dan?', csP: '야키 마시 단' },
+    { id: 'k7', cat: 'show', ko: '태권도를 얼마나 하셨어요?', en: 'How long have you been training?', enP: '하우 롱 해브 유 빈 트레이닝', de: 'Wie lange trainierst du schon?', deP: '비 랑에 트레니어스트 두 숀', cs: 'Jak dlouho trénuješ?', csP: '야크 들로우호 트레누예시' },
+    { id: 'k8', cat: 'show', ko: '같이 운동해요!', en: "Let's train together!", enP: '렛츠 트레인 투게더', de: 'Lass uns zusammen trainieren!', deP: '라스 운스 추잠멘 트레니렌', cs: 'Pojďme trénovat spolu!', csP: '포이므녜 트레노바트 스폴루' },
+
+    { id: 't1', cat: 'term', ko: '차렷', en: 'Attention! (Charyeot)', enP: '어텐션', de: 'Achtung!', deP: '아흐퉁', cs: 'Pozor!', csP: '포조르' },
+    { id: 't2', cat: 'term', ko: '경례', en: 'Bow! (Gyeongnye)', enP: '바우', de: 'Verbeugung!', deP: '페어보이궁', cs: 'Úklona!', csP: '우클로나' },
+    { id: 't3', cat: 'term', ko: '준비', en: 'Ready! (Junbi)', enP: '레디', de: 'Bereit!', deP: '베라이트', cs: 'Připravit!', csP: '프르시프라비트' },
+    { id: 't4', cat: 'term', ko: '시작', en: 'Begin! (Sijak)', enP: '비긴', de: 'Los!', deP: '로스', cs: 'Začít!', csP: '자치트' },
+    { id: 't5', cat: 'term', ko: '그만', en: 'Stop! (Geuman)', enP: '스톱', de: 'Stopp!', deP: '슈토프', cs: 'Stop!', csP: '스토프' },
+    { id: 't6', cat: 'term', ko: '바로', en: 'Return! (Baro)', enP: '리턴', de: 'Zurück!', deP: '추뤼크', cs: 'Zpět!', csP: '스폐트' },
+    { id: 't7', cat: 'term', ko: '쉬어', en: 'At ease! (Swieo)', enP: '앳 이즈', de: 'Rühren!', deP: '뤼렌', cs: 'Pohov!', csP: '포호프' },
+    { id: 't8', cat: 'term', ko: '앞차기', en: 'Front kick (Ap chagi)', enP: '프런트 킥', de: 'Vorwärtstritt', deP: '포어베르츠트리트', cs: 'Přední kop', csP: '프르셰드니 코프' },
+    { id: 't9', cat: 'term', ko: '돌려차기', en: 'Roundhouse kick (Dollyeo chagi)', enP: '라운드하우스 킥', de: 'Halbkreistritt', deP: '할프크라이스트리트', cs: 'Obloukový kop', csP: '오블로우코비 코프' },
+    { id: 't10', cat: 'term', ko: '옆차기', en: 'Side kick (Yeop chagi)', enP: '사이드 킥', de: 'Seitwärtstritt', deP: '자이트베르츠트리트', cs: 'Boční kop', csP: '보치니 코프' },
+    { id: 't11', cat: 'term', ko: '아래막기', en: 'Low block (Arae makki)', enP: '로우 블록', de: 'Abwehr nach unten', deP: '압베어 나흐 운텐', cs: 'Spodní kryt', csP: '스포드니 크리트' },
+    { id: 't12', cat: 'term', ko: '몸통지르기', en: 'Middle punch (Momtong jireugi)', enP: '미들 펀치', de: 'Fauststoß zur Körpermitte', deP: '파우스트슈토스 추어 쾨르퍼미테', cs: 'Úder na střed těla', csP: '우데르 나 스트르셰트 톌라' },
+    { id: 't13', cat: 'term', ko: '하나, 둘, 셋, 넷, 다섯', en: 'One, two, three, four, five', enP: '원 투 쓰리 포 파이브', de: 'Eins, zwei, drei, vier, fünf', deP: '아인스 츠바이 드라이 피어 퓐프', cs: 'Jedna, dva, tři, čtyři, pět', csP: '예드나 드바 트르시 치티르시 폐트' },
+    { id: 't14', cat: 'term', ko: '저를 따라 해 보세요', en: 'Please follow me.', enP: '플리즈 팔로우 미', de: 'Bitte macht mit!', deP: '비테 마흐트 미트', cs: 'Opakujte po mně, prosím.', csP: '오파쿠이테 포 므녜 프로심' },
+    { id: 't15', cat: 'term', ko: '잘했어요!', en: 'Well done!', enP: '웰 던', de: 'Gut gemacht!', deP: '구트 게마흐트', cs: 'Výborně!', csP: '비보르녜' }
+  ],
+  // 단계 레슨: 앞 레슨의 퀴즈와 발음 시험을 통과해야 다음 레슨이 열립니다
+  lessons: [
+    { id: 'L1', ko: '기본 생활', en: 'Everyday basics', ids: ['g1','g2','g3','g4','g5','g6','g7','g8','g9','e7','e8'] },
+    { id: 'L2', ko: '식사', en: 'Meals', ids: ['f1','f2','f3','f4','f5','f6','f7','f8'] },
+    { id: 'L3', ko: '공항·교통', en: 'Airport & transport', ids: ['a1','a2','a3','a4','a5','w1','w2','w3','w4','w5','w6','w7','w8'] },
+    { id: 'L4', ko: '숙소·쇼핑', en: 'Hotel & shopping', ids: ['h1','h2','h3','h4','h5','p1','p2','p3','p4','p5','p6'] },
+    { id: 'L5', ko: '태권도 교류 자기소개', en: 'Taekwondo self-introduction', ids: ['s1','s5','k1','k2','k3','k4','k5','k6','k7','k8'] },
+    { id: 'L6', ko: '세미나 태권도 용어', en: 'Seminar taekwondo terms', ids: ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11','t12','t13','t14','t15'],
+      note: '구령은 세계 어디서나 한국어로 합니다. 현지어는 동작을 설명할 때 쓰세요.', noteEn: 'Commands are given in Korean worldwide. Use the local words to explain the moves.' },
+    { id: 'L7', ko: '공연·긴급 상황', en: 'Shows & emergencies', ids: ['s2','s3','s4','s6','s7','s8','e1','e2','e3','e4','e5','e6'] }
   ]
 };

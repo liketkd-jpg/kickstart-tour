@@ -606,7 +606,57 @@ const EN={'일':"Sun",
 '이어폰을 끼고 앱에서 들어 주세요':"Put on your earphones and listen in the app.",
 '오늘의 안내':"Today's note",
 '앱을 열고 「왔어요」를 눌러 주세요':"Open the app and tap “I'm here”.",
-'알림 켬 ':"Notifications on: "};
+'알림 켬 ':"Notifications on: ",' 레슨':" lessons",
+'(없음)':"(nothing)",
+'개':"",
+'공부 중':"In progress",
+'기록이 지도자께 전달됩니다':"Your progress is shared with your leader",
+'다 외웠으면 퀴즈 보기':"Learned them all? Take the quiz",
+'닮은 정도 ':"match ",
+'듣고 있어요… 지금 읽으세요':"Listening… read it now",
+'듣기를 몇 번 더 따라 해 보고 다시 도전하세요':"Repeat after the audio a few more times, then try again.",
+'레슨 ':"Lesson ",
+'레슨 목록':"All lessons",
+'레슨 통과! 다음 레슨이 열렸습니다':"Lesson passed! The next lesson is unlocked.",
+'레슨마다 퀴즈 80% 이상, 발음 시험 5문장 중 3문장 이상을 통과하면 다음 레슨이 열립니다.':"Score 80% or more on the quiz and pass 3 of 5 sentences in the pronunciation test to unlock the next lesson.",
+'레슨을 통과했습니다':"You passed this lesson",
+'마이크 사용을 허용해 주세요 (휴대폰 설정)':"Please allow microphone access (phone settings).",
+'말하기':"Speak",
+'먼저 들어 보기':"Listen first",
+'문장 ':"Phrases: ",
+'문장 5개가 나옵니다. 「말하기」를 누르고 휴대폰에 대고 또박또박 읽으세요. 문장마다 3번까지 시도할 수 있고, 3문장 이상 통과하면 합격입니다.':"You will get 5 sentences. Tap “Speak” and read clearly into your phone. You get 3 tries per sentence; pass 3 or more to pass the test.",
+'발음 ':"Speaking ",
+'발음 시험':"Speaking test",
+'발음 시험 보기':"Take the speaking test",
+'발음 시험 시작':"Start speaking test",
+'발음 시험 통과!':"Speaking test passed!",
+'소리를 듣지 못했습니다. 다시 눌러 읽어 주세요':"Didn't catch that. Tap and read again.",
+'시도 ':"try ",
+'아직':"Not yet",
+'알아들은 말: ':"Heard: ",
+'앞 레슨을 통과하면 열립니다':"Unlocks after the previous lesson",
+'외운 문장 ':"Phrases learned: ",
+'이 문장 넘어가기':"Skip this sentence",
+'이 문장은 넘어갑니다':"Moving on to the next sentence",
+'이 휴대폰 브라우저는 말소리 알아듣기를 지원하지 않습니다. 안드로이드 크롬이나 아이폰 사파리에서 열어 주세요.':"This browser can't recognize speech. Open the app in Chrome on Android or Safari on iPhone.",
+'이 휴대폰은 이 언어 알아듣기를 지원하지 않습니다':"This phone can't recognize this language.",
+'이제 발음 시험을 통과하면 다음 레슨이 열립니다':"Now pass the speaking test to unlock the next lesson",
+'이제 퀴즈를 통과하면 다음 레슨이 열립니다':"Now pass the quiz to unlock the next lesson",
+'잠김':"Locked",
+'조금만 더!':"Almost there!",
+'조용한 곳에서 하세요. 처음에 마이크 사용을 허용해 달라는 창이 뜨면 허용을 눌러 주세요.':"Find a quiet place. If asked for microphone access, tap Allow.",
+'지도자 미리 보기':"Leader preview",
+'지도자 화면에서는 시험 없이 둘러볼 수 있습니다.':"Leaders can browse without taking tests.",
+'진도가 느린 단원부터 보입니다. 이름을 누르면 레슨별 점수를 볼 수 있습니다.':"Slowest progress is listed first. Tap a name for lesson-by-lesson scores.",
+'퀴즈 ':"Quiz ",
+'퀴즈 통과!':"Quiz passed!",
+'통과':"Passed",
+'통과 ':"pass ",
+'통과! ':"Pass! ",
+'통과한 레슨':"Lessons passed",
+'틀린 문장을 문장 공부에서 다시 들어 보고 도전하세요':"Listen again to the ones you missed, then try again.",
+'평균 ':"Average ",
+'현지어 학습 현황':"Language learning progress"};
 let LANG=(()=>{ try{ const s=localStorage.getItem('lang'); if(s==='ko'||s==='en') return s; }catch(e){} return /^ko/i.test(navigator.language||'ko')?'ko':'en'; })();
 const T=k=>(LANG==='en'&&Object.prototype.hasOwnProperty.call(EN,k))?EN[k]:k;
 const dn=n=>LANG==='en'?'Day '+n:n+'일째';
@@ -1342,72 +1392,150 @@ function cueSheet(stop){
   draw();
 }
 
-/* ---------- 현지어 배우기 (독일어·체코어·영어) ---------- */
-const PH=window.TOUR_PHRASES||{langs:{},cats:[],list:[]};
-S.learn={lang:'de',cat:'all',mode:'study',quiz:null};
+/* ---------- 현지어 배우기: 레슨 단계 학습 (퀴즈 + 발음 시험 통과 → 다음 레슨) ---------- */
+const PH=window.TOUR_PHRASES||{langs:{},cats:[],list:[],lessons:[]};
+const PHMAP=Object.fromEntries(PH.list.map(p=>[p.id,p]));
+const LESSONS=PH.lessons||[];
+const QUIZ_PASS=0.8, PRON_N=5, PRON_PASS=3, PRON_TRIES=3;
+S.learn={lang:'de',lesson:null,mode:'study',quiz:null,pron:null};
 const learnLangs=()=>Object.keys(PH.langs).filter(k=>!(LANG==='en'&&k==='en'));
-const pool=lg=>PH.list.filter(p=>!p.only||p.only===lg);
 const meaningOf=p=>LANG==='en'?p.en:p.ko;
 const langName=k=>{ const l=PH.langs[k]||{}; return LANG==='en'?l.nameEn:l.name; };
 const langWhere=k=>{ const l=PH.langs[k]||{}; return LANG==='en'?l.whereEn:l.where; };
-function learned(lg){ try{ return new Set(JSON.parse(store.get('learn:'+lg)||'[]')); }catch(e){ return new Set(); } }
-function setLearned(lg,set){ store.set('learn:'+lg,JSON.stringify([...set])); }
+const lessonName=l=>LANG==='en'?l.en:l.ko;
+const lessonPhrases=(l,lg)=>l.ids.map(i=>PHMAP[i]).filter(p=>p&&(!p.only||p.only===lg));
+const testable=(l,lg)=>lessonPhrases(l,lg).filter(p=>!/○○|…/.test(p[lg]));
+
+// 학습 기록: 단원은 서버(내 정보)와 이 휴대폰에, 지도자는 이 휴대폰에만 저장
+function progress(){
+  if(S.anon&&S.me){ if(!S.me.learn||typeof S.me.learn!=='object') S.me.learn={}; return S.me.learn; }
+  if(!S.learnLocal){ try{ S.learnLocal=JSON.parse(store.get('learnProg')||'{}'); }catch(e){ S.learnLocal={}; } }
+  return S.learnLocal;
+}
+const langProg=lg=>{ const p=progress(); p[lg]=p[lg]||{passed:[],quiz:{},pron:{},learned:[]}; ['passed','learned'].forEach(k=>{ if(!Array.isArray(p[lg][k])) p[lg][k]=[]; }); ['quiz','pron'].forEach(k=>{ if(!p[lg][k]||typeof p[lg][k]!=='object') p[lg][k]={}; }); return p[lg]; };
+let syncT;
+function saveProgress(){
+  if(S.anon&&S.me){ clearTimeout(syncT); syncT=setTimeout(()=>{ S.sb.rpc('tour_set_learn',{p_token:S.token,p_learn:S.me.learn}).then(r=>{ if(r.error) console.warn(r.error); }); },600); }
+  else store.set('learnProg',JSON.stringify(S.learnLocal||{}));
+}
+const isPassed=(lg,lid)=>langProg(lg).passed.includes(lid);
+const isOpen=(lg,i)=>!S.anon||i===0||isPassed(lg,LESSONS[i-1].id); // 지도자는 모든 레슨을 미리 볼 수 있음
+function checkPass(lg,l){
+  const pr=langProg(lg), n=Math.min(8,testable(l,lg).length);
+  const quizOk=(pr.quiz[l.id]||0)>=Math.ceil(n*QUIZ_PASS), pronOk=(pr.pron[l.id]||0)>=PRON_PASS;
+  if(quizOk&&pronOk&&!pr.passed.includes(l.id)){ pr.passed.push(l.id); saveProgress(); toast(T('레슨 통과! 다음 레슨이 열렸습니다')); }
+}
+
 function sayLang(text,lg,rate){
   if(!('speechSynthesis' in window)){ toast(T('이 휴대폰은 읽어 주기를 지원하지 않습니다')); return; }
   stopSpeak();
   const code=(PH.langs[lg]||{}).speech||'en-US';
-  const clean=String(text).replace(/\(a\)/g,'').replace(/…/g,'').replace(/\s*\/\s*/g,', ');
+  const clean=String(text).replace(/\((a|á)\)/g,'').replace(/\([^)]*\)/g,'').replace(/…/g,'').replace(/\s*\/\s*/g,', ');
   const u=new SpeechSynthesisUtterance(clean); u.lang=code; u.rate=rate||0.9;
   const v=speechSynthesis.getVoices().find(x=>x.lang&&x.lang.replace('_','-').toLowerCase().startsWith(code.slice(0,2).toLowerCase()));
   if(v) u.voice=v; else if(lg==='cs') toast(T('이 휴대폰에 체코어 목소리가 없어 다른 목소리로 읽을 수 있습니다. 한글 발음을 함께 보세요'));
   speechSynthesis.speak(u);
 }
-function startQuiz(mode){
-  const lg=S.learn.lang, all=pool(lg).filter(p=>!/○○|…/.test(p[lg]));
+
+// 발음 비교: 악센트·문장부호를 빼고 글자 차이로 닮은 정도(0~1)
+const normTxt=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ß/g,'ss').replace(/\([^)]*\)/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+function lev(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m; let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; } return prev[n]; }
+function similar(heard,target){
+  const h=normTxt(heard); if(!h) return 0;
+  const options=[target].concat(String(target).split('/')).map(normTxt).filter(Boolean);
+  return Math.max(...options.map(t=>1-lev(h,t)/Math.max(h.length,t.length)));
+}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function listenOnce(lg){ return new Promise((res,rej)=>{
+  const r=new SR(); r.lang=(PH.langs[lg]||{}).speech||'en-US'; r.interimResults=false; r.maxAlternatives=5;
+  let done=false; const fin=(v,e)=>{ if(done) return; done=true; try{ r.stop(); }catch(x){} e?rej(e):res(v); };
+  r.onresult=ev=>{ const alts=[]; for(const a of ev.results[0]) alts.push(a.transcript); fin(alts); };
+  r.onerror=ev=>fin(null,ev.error||'error'); r.onend=()=>fin([]);
+  setTimeout(()=>fin(null,'timeout'),9000);
+  try{ r.start(); }catch(e){ fin(null,'start'); }
+}); }
+
+function startQuiz(mode,l){
+  const lg=S.learn.lang, all=testable(l,lg), others=PH.list.filter(p=>!/○○|…/.test(p[lg])&&(!p.only||p.only===lg));
   const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
-  const qs=shuffle(all.slice()).slice(0,10).map(p=>({p,opts:shuffle([p].concat(shuffle(all.filter(x=>x.id!==p.id)).slice(0,3)))}));
-  S.learn.quiz={mode,lang:lg,qs,i:0,score:0,picked:null};
+  const qs=shuffle(all.slice()).slice(0,8).map(p=>{ const near=shuffle(all.filter(x=>x.id!==p.id)); const far=shuffle(others.filter(x=>x.id!==p.id&&!near.includes(x)));
+    return {p,opts:shuffle([p].concat(near.concat(far).slice(0,3)))}; });
+  S.learn.quiz={mode,lang:lg,lesson:l.id,qs,i:0,score:0,picked:null};
   if(mode==='listen') setTimeout(()=>sayLang(qs[0].p[lg],lg),300);
 }
+function startPron(l){
+  const lg=S.learn.lang, all=testable(l,lg).slice();
+  for(let i=all.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [all[i],all[j]]=[all[j],all[i]]; }
+  S.learn.pron={lang:lg,lesson:l.id,items:all.slice(0,PRON_N),i:0,tries:0,ok:0,last:null,busy:false};
+}
+
 function viewLearn(){
-  const L2=S.learn, lg=L2.lang, wrap=h('div',{class:'stack'});
-  if(!learnLangs().includes(lg)) L2.lang=learnLangs()[0];
-  const list=pool(L2.lang), got=learned(L2.lang), best=Number(store.get('quizBest:'+L2.lang)||0);
-  wrap.append(h('div',{class:'chips',role:'group','aria-label':T('언어')},learnLangs().map(k=>h('button',{class:'chip',type:'button','aria-pressed':String(k===L2.lang),onclick:()=>{ L2.lang=k; L2.quiz=null; stopSpeak(); render(); }},langName(k)+' · '+langWhere(k)))));
-  wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:langName(L2.lang)+' · '+langWhere(L2.lang)}),h('span',{text:best?(T('퀴즈 최고 ')+best+' / 10'):T('퀴즈 아직 안 함')})),
-    h('div',{class:'big'},String(list.filter(p=>got.has(p.id)).length),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+list.length})),
-    h('div',{class:'row'},h('span',{text:T('외운 문장')}))));
-  wrap.append(h('div',{class:'catsel',role:'group','aria-label':T('공부 방식')},[['study',T('문장 공부')],['quiz',T('퀴즈')]].map(([k,l])=>h('button',{type:'button','aria-pressed':String(L2.mode===k),onclick:()=>{ L2.mode=k; if(k==='study') L2.quiz=null; stopSpeak(); render(); }},l))));
-  if(L2.mode==='quiz') { wrap.append(viewQuiz()); return wrap; }
-  wrap.append(h('div',{class:'chips',role:'group','aria-label':T('주제')},[['all',T('전체')]].concat(PH.cats.map(c=>[c.id,LANG==='en'?c.en:c.ko])).map(([k,l])=>h('button',{class:'chip',type:'button','aria-pressed':String(L2.cat===k),onclick:()=>{ L2.cat=k; render(); }},l))));
-  list.filter(p=>L2.cat==='all'||p.cat===L2.cat).forEach(p=>{
-    const has=got.has(p.id), pron=p[L2.lang+'P'];
+  const L2=S.learn, wrap=h('div',{class:'stack'});
+  if(!learnLangs().includes(L2.lang)) L2.lang=learnLangs()[0];
+  const lg=L2.lang, pr=langProg(lg);
+  wrap.append(h('div',{class:'chips',role:'group','aria-label':T('언어')},learnLangs().map(k=>h('button',{class:'chip',type:'button','aria-pressed':String(k===lg),onclick:()=>{ L2.lang=k; L2.quiz=null; L2.pron=null; stopSpeak(); render(); }},langName(k)+' · '+langWhere(k)))));
+  const lesson=LESSONS.find(x=>x.id===L2.lesson);
+  if(!lesson){
+    const passedN=LESSONS.filter(x=>pr.passed.includes(x.id)).length;
+    wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:langName(lg)+' · '+langWhere(lg)}),h('span',{text:S.anon?T('기록이 지도자께 전달됩니다'):T('지도자 미리 보기')})),
+      h('div',{class:'big'},String(passedN),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+LESSONS.length})),
+      h('div',{class:'row'},h('span',{text:T('통과한 레슨')}))));
+    wrap.append(h('span',{class:'muted',text:T('레슨마다 퀴즈 80% 이상, 발음 시험 5문장 중 3문장 이상을 통과하면 다음 레슨이 열립니다.')}));
+    LESSONS.forEach((l,i)=>{
+      const open=isOpen(lg,i), passed=pr.passed.includes(l.id), n=Math.min(8,testable(l,lg).length);
+      const qs=pr.quiz[l.id], ps=pr.pron[l.id];
+      wrap.append(h('button',{class:'feat',type:'button',disabled:open?null:true,style:'text-align:left;width:100%;cursor:'+(open?'pointer':'default')+';opacity:'+(open?1:.55)+(passed?';border-color:var(--soft-ink)':''),onclick:open?()=>{ L2.lesson=l.id; L2.mode='study'; L2.quiz=null; L2.pron=null; render(); window.scrollTo(0,0); }:null},
+        h('span',{class:'ico num',style:'font-size:17px;font-weight:700;'+(passed?'background:var(--hero);color:#fff':''),text:String(i+1)}),
+        h('div',{style:'flex:1;min-width:0'},h('b',{text:lessonName(l)}),
+          h('span',{text:passed?T('통과')+' · '+T('퀴즈 ')+(qs||0)+'/'+n+' · '+T('발음 ')+(ps||0)+'/'+PRON_N : open?(T('문장 ')+lessonPhrases(l,lg).length+T('개')+(qs!=null||ps!=null?' · '+T('퀴즈 ')+(qs||0)+'/'+n+' · '+T('발음 ')+(ps||0)+'/'+PRON_N:'')):T('앞 레슨을 통과하면 열립니다')})),
+        h('span',{class:'pill'+(passed?'':open?' warn':''),text:passed?T('통과'):open?T('공부 중'):T('잠김')})));
+    });
+    return wrap;
+  }
+  // 레슨 안
+  const li=LESSONS.indexOf(lesson), n=Math.min(8,testable(lesson,lg).length), passed=pr.passed.includes(lesson.id);
+  wrap.append(h('button',{class:'linkbtn',type:'button',style:'align-self:flex-start',onclick:()=>{ L2.lesson=null; L2.quiz=null; L2.pron=null; stopSpeak(); render(); }},'← '+T('레슨 목록')));
+  wrap.append(h('section',{class:'hero'},h('div',{class:'row'},h('span',{text:T('레슨 ')+(li+1)+' · '+langName(lg)}),h('span',{text:passed?T('통과'):T('공부 중')})),
+    h('div',{style:'font-size:24px;font-weight:800',text:lessonName(lesson)}),
+    h('div',{class:'row'},h('span',{text:T('퀴즈 ')+(pr.quiz[lesson.id]||0)+' / '+n+' ('+T('통과 ')+Math.ceil(n*QUIZ_PASS)+')'}),h('span',{text:T('발음 ')+(pr.pron[lesson.id]||0)+' / '+PRON_N+' ('+T('통과 ')+PRON_PASS+')'}))));
+  if(lesson.note) wrap.append(h('div',{class:'banner',style:'background:var(--soft)'},h('span',{text:LANG==='en'?lesson.noteEn:lesson.note})));
+  wrap.append(h('div',{class:'catsel',role:'group','aria-label':T('공부 방식'),style:'display:grid;grid-template-columns:repeat(3,minmax(0,1fr))'},[['study',T('문장 공부')],['quiz',T('퀴즈')],['pron',T('발음 시험')]].map(([k,l])=>h('button',{type:'button',style:'height:44px','aria-pressed':String(L2.mode===k),onclick:()=>{ L2.mode=k; L2.quiz=null; L2.pron=null; stopSpeak(); render(); }},l))));
+  if(L2.mode==='quiz'){ wrap.append(viewQuiz(lesson)); return wrap; }
+  if(L2.mode==='pron'){ wrap.append(viewPron(lesson)); return wrap; }
+  lessonPhrases(lesson,lg).forEach(p=>{
+    const has=pr.learned.includes(p.id), pron=p[lg+'P'];
     wrap.append(h('article',{class:'ncard',style:'gap:6px'},
       h('span',{class:'muted',style:'font-weight:700',text:meaningOf(p)}),
-      h('div',{class:'nplace',style:'font-size:21px',lang:L2.lang,text:p[L2.lang]}),
+      h('div',{class:'nplace',style:'font-size:21px',lang:lg,text:p[lg]}),
       (LANG!=='en'&&pron)?h('span',{style:'color:var(--soft-ink);font-weight:600',text:'['+pron+']'}):null,
       h('div',{style:'display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:4px'},
-        h('button',{class:'btn btn-navy',type:'button',style:'min-height:44px;font-size:13px',onclick:()=>sayLang(p[L2.lang],L2.lang,0.9)},T('듣기')),
-        h('button',{class:'btn btn-ghost',type:'button',style:'min-height:44px;font-size:13px',onclick:()=>sayLang(p[L2.lang],L2.lang,0.6)},T('천천히')),
-        h('button',{class:'btn '+(has?'btn-line':'btn-ghost'),type:'button','aria-pressed':String(has),style:'min-height:44px;font-size:13px',onclick:()=>{ has?got.delete(p.id):got.add(p.id); setLearned(L2.lang,got); render(); }},has?T('외웠어요'):T('외우기')))));
+        h('button',{class:'btn btn-navy',type:'button',style:'min-height:44px;font-size:13px',onclick:()=>sayLang(p[lg],lg,0.9)},T('듣기')),
+        h('button',{class:'btn btn-ghost',type:'button',style:'min-height:44px;font-size:13px',onclick:()=>sayLang(p[lg],lg,0.6)},T('천천히')),
+        h('button',{class:'btn '+(has?'btn-line':'btn-ghost'),type:'button','aria-pressed':String(has),style:'min-height:44px;font-size:13px',onclick:()=>{ if(has) pr.learned=pr.learned.filter(x=>x!==p.id); else pr.learned.push(p.id); saveProgress(); render(); }},has?T('외웠어요'):T('외우기')))));
   });
+  wrap.append(h('button',{class:'btn btn-red',type:'button',onclick:()=>{ L2.mode='quiz'; render(); window.scrollTo(0,0); }},T('다 외웠으면 퀴즈 보기')));
   return wrap;
 }
-function viewQuiz(){
-  const L2=S.learn, q=L2.quiz;
-  if(!q||q.lang!==L2.lang){
-    return h('section',{class:'panel'},h('h2',{text:T('퀴즈 10문제')}),h('span',{class:'muted',text:T('뜻 보고 고르기는 우리말 뜻을 보고 현지어를, 듣고 고르기는 소리를 듣고 뜻을 고릅니다.')}),
-      h('div',{class:'actions'},h('button',{class:'btn btn-red',type:'button',onclick:()=>{ startQuiz('meaning'); render(); }},T('뜻 보고 고르기')),h('button',{class:'btn btn-navy',type:'button',onclick:()=>{ startQuiz('listen'); render(); }},T('듣고 고르기'))));
+
+function viewQuiz(l){
+  const L2=S.learn, q=L2.quiz, lg=L2.lang, pr=langProg(lg);
+  if(!q||q.lang!==lg||q.lesson!==l.id){
+    return h('section',{class:'panel'},h('h2',{text:T('퀴즈')+' · '+lessonName(l)}),h('span',{class:'muted',text:T('뜻 보고 고르기는 우리말 뜻을 보고 현지어를, 듣고 고르기는 소리를 듣고 뜻을 고릅니다.')}),
+      h('div',{class:'actions'},h('button',{class:'btn btn-red',type:'button',onclick:()=>{ startQuiz('meaning',l); render(); }},T('뜻 보고 고르기')),h('button',{class:'btn btn-navy',type:'button',onclick:()=>{ startQuiz('listen',l); render(); }},T('듣고 고르기'))));
   }
-  if(q.i>=q.qs.length){
-    const best=Math.max(q.score,Number(store.get('quizBest:'+q.lang)||0)); store.set('quizBest:'+q.lang,String(best));
-    return h('section',{class:'hero',style:'align-items:flex-start'},h('div',{class:'row'},h('span',{text:T('퀴즈 끝')}),h('span',{text:T('최고 ')+best+' / 10'})),
-      h('div',{class:'big'},String(q.score),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / 10'})),
-      h('div',{class:'row'},h('span',{text:q.score>=9?T('완벽합니다! 현지에서 자신 있게 써 보세요'):q.score>=6?T('잘했어요! 틀린 문장만 한 번 더 들어 보세요'):T('문장 공부에서 듣기를 몇 번 더 해 보세요')})),
-      h('button',{class:'hero-btn',type:'button',style:'min-height:44px',onclick:()=>{ startQuiz(q.mode); render(); }},T('다시 하기')));
+  const total=q.qs.length, need=Math.ceil(total*QUIZ_PASS);
+  if(q.i>=total){
+    if(!q.saved){ q.saved=true; pr.quiz[l.id]=Math.max(pr.quiz[l.id]||0,q.score); saveProgress(); checkPass(lg,l); }
+    const ok=q.score>=need;
+    return h('section',{class:'hero',style:'align-items:flex-start'},h('div',{class:'row'},h('span',{text:ok?T('퀴즈 통과!'):T('조금만 더!')}),h('span',{text:T('통과 ')+need+' / '+total})),
+      h('div',{class:'big'},String(q.score),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+total})),
+      h('div',{class:'row'},h('span',{text:ok?(pr.passed.includes(l.id)?T('레슨을 통과했습니다'):T('이제 발음 시험을 통과하면 다음 레슨이 열립니다')):T('틀린 문장을 문장 공부에서 다시 들어 보고 도전하세요')})),
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'hero-btn',type:'button',style:'min-height:44px',onclick:()=>{ startQuiz(q.mode,l); render(); }},T('다시 하기')),
+        ok&&!pr.passed.includes(l.id)?h('button',{class:'hero-btn',type:'button',style:'min-height:44px',onclick:()=>{ L2.mode='pron'; L2.quiz=null; render(); }},T('발음 시험 보기')):null));
   }
-  const cur=q.qs[q.i], lg=q.lang, isListen=q.mode==='listen';
-  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('span',{class:'pill',text:(q.i+1)+' / '+q.qs.length}),h('span',{class:'muted',text:T('맞힌 문제 ')+q.score})));
+  const cur=q.qs[q.i], isListen=q.mode==='listen';
+  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('span',{class:'pill',text:(q.i+1)+' / '+total}),h('span',{class:'muted',text:T('맞힌 문제 ')+q.score})));
   if(isListen) sec.append(h('button',{class:'btn btn-navy btn-big',type:'button',onclick:()=>sayLang(cur.p[lg],lg,0.85)},T('다시 듣기')));
   else sec.append(h('div',{class:'nplace',style:'font-size:22px;text-align:center;padding:10px 0',text:meaningOf(cur.p)}));
   sec.append(h('div',{class:'stack',style:'gap:8px'},cur.opts.map(o=>{
@@ -1419,9 +1547,84 @@ function viewQuiz(){
   if(q.picked){
     const ok=q.picked===cur.p.id, pron=cur.p[lg+'P'];
     sec.append(h('div',{class:'banner',style:ok?'background:var(--soft)':''},h('span',{text:(ok?T('정답! '):T('아쉬워요. 정답: '))+cur.p[lg]+((LANG!=='en'&&pron)?' ['+pron+']':'')})),
-      h('button',{class:'btn btn-red',type:'button',onclick:()=>{ q.i++; q.picked=null; if(isListen&&q.i<q.qs.length) setTimeout(()=>sayLang(q.qs[q.i].p[lg],lg),250); render(); }},q.i+1<q.qs.length?T('다음 문제'):T('결과 보기')));
+      h('button',{class:'btn btn-red',type:'button',onclick:()=>{ q.i++; q.picked=null; if(isListen&&q.i<total) setTimeout(()=>sayLang(q.qs[q.i].p[lg],lg),250); render(); }},q.i+1<total?T('다음 문제'):T('결과 보기')));
   }
   return sec;
+}
+
+function viewPron(l){
+  const L2=S.learn, lg=L2.lang, pr=langProg(lg);
+  if(!SR){
+    return h('section',{class:'panel'},h('h2',{text:T('발음 시험')}),
+      h('span',{class:'muted',text:T('이 휴대폰 브라우저는 말소리 알아듣기를 지원하지 않습니다. 안드로이드 크롬이나 아이폰 사파리에서 열어 주세요.')}),
+      S.anon?null:h('span',{class:'muted',text:T('지도자 화면에서는 시험 없이 둘러볼 수 있습니다.')}));
+  }
+  let ps=L2.pron;
+  if(!ps||ps.lang!==lg||ps.lesson!==l.id){
+    return h('section',{class:'panel'},h('h2',{text:T('발음 시험')+' · '+lessonName(l)}),
+      h('span',{class:'muted',text:T('문장 5개가 나옵니다. 「말하기」를 누르고 휴대폰에 대고 또박또박 읽으세요. 문장마다 3번까지 시도할 수 있고, 3문장 이상 통과하면 합격입니다.')}),
+      h('span',{class:'muted',text:T('조용한 곳에서 하세요. 처음에 마이크 사용을 허용해 달라는 창이 뜨면 허용을 눌러 주세요.')}),
+      h('button',{class:'btn btn-red',type:'button',onclick:()=>{ startPron(l); render(); }},T('발음 시험 시작')));
+  }
+  if(ps.i>=ps.items.length){
+    if(!ps.saved){ ps.saved=true; pr.pron[l.id]=Math.max(pr.pron[l.id]||0,ps.ok); saveProgress(); checkPass(lg,l); }
+    const ok=ps.ok>=PRON_PASS;
+    return h('section',{class:'hero',style:'align-items:flex-start'},h('div',{class:'row'},h('span',{text:ok?T('발음 시험 통과!'):T('조금만 더!')}),h('span',{text:T('통과 ')+PRON_PASS+' / '+ps.items.length})),
+      h('div',{class:'big'},String(ps.ok),h('span',{style:'font-size:24px;color:#8E9AC8',text:' / '+ps.items.length})),
+      h('div',{class:'row'},h('span',{text:ok?(pr.passed.includes(l.id)?T('레슨을 통과했습니다'):T('이제 퀴즈를 통과하면 다음 레슨이 열립니다')):T('듣기를 몇 번 더 따라 해 보고 다시 도전하세요')})),
+      h('button',{class:'hero-btn',type:'button',style:'min-height:44px',onclick:()=>{ startPron(l); render(); }},T('다시 하기')));
+  }
+  const p=ps.items[ps.i], pron=p[lg+'P'], need=lg==='cs'?0.5:0.6;
+  const sec=h('section',{class:'panel'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('span',{class:'pill',text:(ps.i+1)+' / '+ps.items.length}),h('span',{class:'muted',text:T('통과 ')+ps.ok+' · '+T('시도 ')+ps.tries+' / '+PRON_TRIES})),
+    h('span',{class:'muted',style:'font-weight:700',text:meaningOf(p)}),
+    h('div',{class:'nplace',style:'font-size:24px',lang:lg,text:p[lg]}),
+    (LANG!=='en'&&pron)?h('span',{style:'color:var(--soft-ink);font-weight:600',text:'['+pron+']'}):null,
+    h('button',{class:'btn btn-ghost',type:'button',style:'min-height:44px',onclick:()=>sayLang(p[lg],lg,0.8)},T('먼저 들어 보기')));
+  const next=()=>{ ps.i++; ps.tries=0; ps.last=null; render(); };
+  const speakBtn=h('button',{class:'btn btn-red btn-big',type:'button',disabled:ps.busy?true:null},ps.busy?T('듣고 있어요… 지금 읽으세요'):T('말하기'));
+  speakBtn.onclick=async()=>{
+    stopSpeak(); ps.busy=true; render();
+    try{
+      const alts=await listenOnce(lg); ps.busy=false;
+      const best=Math.max(0,...(alts||[]).map(a=>similar(a,p[lg])));
+      ps.tries++; ps.last={heard:(alts&&alts[0])||'',score:best};
+      if(best>=need){ ps.ok++; toast(T('통과! ')+Math.round(best*100)+'%'); setTimeout(next,700); }
+      else if(ps.tries>=PRON_TRIES){ toast(T('이 문장은 넘어갑니다')); setTimeout(next,900); }
+      render();
+    }catch(e){ ps.busy=false; toast(e==='not-allowed'||e==='service-not-allowed'?T('마이크 사용을 허용해 주세요 (휴대폰 설정)'):e==='language-not-supported'?T('이 휴대폰은 이 언어 알아듣기를 지원하지 않습니다'):T('소리를 듣지 못했습니다. 다시 눌러 읽어 주세요')); render(); }
+  };
+  sec.append(speakBtn);
+  if(ps.last) sec.append(h('div',{class:'banner',style:ps.last.score>=need?'background:var(--soft)':''},h('span',{text:T('알아들은 말: ')+(ps.last.heard||T('(없음)'))+' · '+T('닮은 정도 ')+Math.round(ps.last.score*100)+'%'})));
+  if(ps.tries>0&&ps.last&&ps.last.score<need&&ps.tries<PRON_TRIES) sec.append(h('button',{class:'linkbtn',type:'button',style:'align-self:flex-end',onclick:next},T('이 문장 넘어가기')));
+  return sec;
+}
+
+/* ---------- 지도자: 현지어 학습 현황 ---------- */
+function learnSummary(m,lg){ const pr=(m.learn&&m.learn[lg])||{}; return { passed:Array.isArray(pr.passed)?pr.passed.length:0, learned:Array.isArray(pr.learned)?pr.learned.length:0, quiz:pr.quiz||{}, pron:pr.pron||{} }; }
+function learnPanel(){
+  const mem=S.members.filter(m=>m.token), langs=learnLangs(), total=LESSONS.length;
+  if(!mem.length) return null;
+  const lg=S.learnView&&langs.includes(S.learnView)?S.learnView:langs[0];
+  const rows=mem.map(m=>({m,s:learnSummary(m,lg)})).sort((a,b)=>a.s.passed-b.s.passed||a.m.name.localeCompare(b.m.name,'ko'));
+  const avg=rows.reduce((t,r)=>t+r.s.passed,0)/rows.length;
+  return h('section',{class:'panel'},
+    h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:8px'},h('h2',{text:T('현지어 학습 현황')}),h('span',{class:'pill',text:T('평균 ')+avg.toFixed(1)+' / '+total+T(' 레슨')})),
+    h('div',{class:'chips',role:'group','aria-label':T('언어')},langs.map(k=>h('button',{class:'chip',type:'button','aria-pressed':String(k===lg),onclick:()=>{ S.learnView=k; render(); }},langName(k)))),
+    h('span',{class:'muted',text:T('진도가 느린 단원부터 보입니다. 이름을 누르면 레슨별 점수를 볼 수 있습니다.')}),
+    h('div',{class:'list'},rows.map(({m,s})=>h('button',{class:'row-item',type:'button',style:'width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;color:var(--fg)',onclick:()=>learnDetail(m,lg)},
+      h('div',{class:'row-body'},h('span',{class:'ttl',text:m.name+' · '+T(m.grp)}),
+        h('div',{style:'display:flex;gap:3px;margin-top:4px'},LESSONS.map(l=>h('span',{title:lessonName(l),style:'flex:1;height:8px;border-radius:4px;background:'+((m.learn&&m.learn[lg]&&Array.isArray(m.learn[lg].passed)&&m.learn[lg].passed.includes(l.id))?'var(--soft-ink)':'var(--line)')})))),
+      h('span',{class:'pill'+(s.passed<Math.ceil(avg)?' warn':''),text:s.passed+' / '+total})))));
+}
+function learnDetail(m,lg){
+  const s=learnSummary(m,lg);
+  openSheet(m.name+' · '+langName(lg),[
+    h('span',{class:'muted',text:T('외운 문장 ')+s.learned+T('개')}),
+    h('div',{class:'list'},LESSONS.map((l,i)=>{ const passed=(m.learn&&m.learn[lg]&&Array.isArray(m.learn[lg].passed)&&m.learn[lg].passed.includes(l.id));
+      const n=Math.min(8,testable(l,lg).length);
+      return h('div',{class:'row-item'},h('span',{class:'num',style:'font-weight:700;min-width:24px',text:String(i+1)}),
+        h('div',{class:'row-body'},h('span',{class:'ttl',text:lessonName(l)}),h('span',{class:'muted',text:T('퀴즈 ')+(s.quiz[l.id]!=null?s.quiz[l.id]+'/'+n:'-')+' · '+T('발음 ')+(s.pron[l.id]!=null?s.pron[l.id]+'/'+PRON_N:'-')})),
+        h('span',{class:'pill'+(passed?'':' warn'),text:passed?T('통과'):T('아직')})); }))]);
 }
 
 /* ---------- 휴대폰 알림 ---------- */
@@ -1553,6 +1756,7 @@ function viewMembers(){
   sv.onclick=async()=>{ if(!tn.value.trim()){ toast(T('원정 이름을 넣어 주세요')); return; } if(ts.value&&te.value&&te.value<ts.value){ toast(T('돌아오는 날이 출발일보다 빠릅니다')); return; }
     const r=await S.sb.from('tour_tours').update({name:tn.value.trim(),start_date:ts.value||null,end_date:te.value||null}).eq('id',S.tour.id).select().single();
     if(r.error) toast(errText(r.error)); else { S.tour=r.data; toast(T('저장했습니다')); render(); } };
+  { const lp=learnPanel(); if(lp) wrap.append(lp); }
   wrap.append(roomsPanel(), checklistEditor());
   wrap.append(h('section',{class:'panel'},h('h2',{text:T('원정 정보')}),h('label',{class:'f'},T('원정 이름'),tn),h('div',{class:'grid2'},h('label',{class:'f'},T('출발일'),ts),h('label',{class:'f'},T('돌아오는 날'),te)),sv));
   return wrap;
