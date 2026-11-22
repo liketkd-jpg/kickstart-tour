@@ -69,7 +69,7 @@ h2{margin:0;font-size:16px;font-weight:700;letter-spacing:-.02em}
 .btn-ghost{background:var(--card);color:var(--fg);border:1px solid var(--field-line)}
 .btn-big{min-height:76px;font-size:21px;border-radius:20px}
 .btn[disabled]{opacity:.5;cursor:default;box-shadow:none}
-label.f{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600;min-width:0}
+label.f,div.f{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600;min-width:0}
 .in{width:100%;min-height:50px;border:1px solid var(--field-line);border-radius:14px;background:var(--field);padding:0 14px;font-size:16px;color:var(--fg);min-width:0;transition:border-color .15s,box-shadow .15s}
 .in:focus{outline:none;border-color:var(--soft-ink);box-shadow:0 0 0 4px var(--soft)}
 textarea.in{padding:12px 14px;min-height:84px;resize:vertical;line-height:1.6}
@@ -345,6 +345,36 @@ const EN={'일':"Sun",
 '구글 지도에서 「공유 → 링크 복사」 후 붙여 넣기':"In Google Maps: Share → Copy link, then paste",
 'AI 해설 만들기':"Write guide with AI",
 '자세한 내용':"Details",
+'복사 번호가 맞지 않습니다. 다시 확인해 주세요':"That template code doesn't match. Please check it.",
+'설정 글을 한 번 더 실행해 주세요 (supabase-setup.sql)':"Please run the setup SQL again (supabase-setup.sql).",
+'빈 원정으로 시작':"Start from blank",
+'복사: ':"Copy: ",
+'다른 지도자의 복사 번호로 가져오기':"Import with another leader's template code",
+'예: T7K2QX':"e.g. T7K2QX",
+'공연 순서표':"Cue sheet",
+'관광 해설':"Audio guides",
+'복사할 것':"What to copy",
+'복사 번호':"Template code",
+'출발일을 넣으면 일정 날짜가 새 출발일에 맞게 옮겨집니다. 단원 명단·공지·사진은 복사되지 않습니다.':"If you set a departure date, schedule dates shift to match. Members, notices and photos are not copied.",
+'(복사)':"(copy)",
+'복사 번호를 넣어 주세요':"Please enter the template code.",
+'원정 틀을 복사해 새 원정을 만들었습니다':"New tour created from the template.",
+'틀 공유 중':"Template shared",
+'틀 공유':"Share template",
+'원정 틀':"Template",
+'다른 지도자에게 이 원정의 일정·준비물·공연 순서표·관광 해설을 틀로 넘겨줍니다. 받는 분은 「새 원정 만들기 → 다른 지도자의 복사 번호로 가져오기」에 이 번호를 넣으면 됩니다. 단원 명단·공지·사진·단원 이름은 넘어가지 않습니다.':"Share this tour's schedule, packing list, cue sheet and audio guides as a template. The other leader enters this code under “Create a new tour → Import with another leader's template code”. Members, notices, photos and member names are not shared.",
+'복사 번호 만들기':"Create template code",
+'번호와 안내 복사':"Copy code & instructions",
+'[KICKSTART UP 원정 틀] ':"[KICKSTART UP tour template] ",
+'\n지도자 로그인 → 새 원정 만들기 → 「다른 지도자의 복사 번호로 가져오기」\n복사 번호: ':"\nLeader login → Create a new tour → “Import with another leader's template code”\nTemplate code: ",
+'복사했습니다':"Copied.",
+'복사가 안 됩니다. 번호를 직접 알려 주세요':"Couldn't copy. Please share the code directly.",
+'긴급 연락처·방문지 연락처도 함께 넘기기':"Also share emergency & venue contacts",
+'끄면 대사관·병원 번호와 현지 담당자 연락처는 넘어가지 않습니다':"When off, embassy/hospital numbers and local contact details are not shared.",
+'공유 그만하기':"Stop sharing",
+'번호가 사라집니다':"the code will be removed",
+'공유를 껐습니다':"Sharing turned off.",
+'원정 틀 공유':"Share tour template",
 '초':"s",
 '구글 지도 링크나 장소 이름을 넣어 주세요':"Enter a Google Maps link or a place name.",
 'AI가 해설을 쓰는 중… (10~30초)':"AI is writing… (10–30 s)",
@@ -767,6 +797,8 @@ function errText(e){ const m=String(e&&(e.message||e.error_description)||e||'');
   if(/already registered/i.test(m)) return T('이미 가입된 이메일입니다. 로그인해 주세요');
   if(/Password should be/i.test(m)) return T('비밀번호는 6자 이상으로 넣어 주세요');
   if(/Failed to fetch|NetworkError|network/i.test(m)) return T('인터넷 연결을 확인해 주세요');
+  if(/no_template/.test(m)) return T('복사 번호가 맞지 않습니다. 다시 확인해 주세요');
+  if(/tour_clone|schema cache/.test(m)) return T('설정 글을 한 번 더 실행해 주세요 (supabase-setup.sql)');
   return T('잠시 문제가 생겼습니다. 다시 시도해 주세요'); }
 
 const TYPES=['관광','공연','리허설','식사','이동','숙소','기타'];
@@ -884,6 +916,25 @@ function screenJoin(code){
 
 /* ---------- 지도자: 원정 목록 ---------- */
 function genCode(){ const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; const b=new Uint32Array(6); crypto.getRandomValues(b); return [...b].map(x=>A[x%A.length]).join(''); }
+function tplShareSheet(t){
+  const body=h('div',{class:'stack'});
+  const draw=()=>{ body.replaceChildren();
+    body.append(h('p',{class:'muted',style:'margin:0;line-height:1.6',text:T('다른 지도자에게 이 원정의 일정·준비물·공연 순서표·관광 해설을 틀로 넘겨줍니다. 받는 분은 「새 원정 만들기 → 다른 지도자의 복사 번호로 가져오기」에 이 번호를 넣으면 됩니다. 단원 명단·공지·사진·단원 이름은 넘어가지 않습니다.')}));
+    if(!t.tpl_code){
+      const on=h('button',{class:'btn btn-red wide',type:'button'},T('복사 번호 만들기'));
+      on.onclick=async()=>{ on.disabled=true; let r; for(let i=0;i<5;i++){ r=await S.sb.from('tour_tours').update({tpl_code:'T'+genCode().slice(1)}).eq('id',t.id).select().single(); if(!r.error||r.error.code!=='23505') break; }
+        on.disabled=false; if(r.error){ toast(errText(r.error)); return; } Object.assign(t,r.data); draw(); };
+      body.append(on); return; }
+    const copy=h('button',{class:'btn btn-navy',type:'button'},T('번호와 안내 복사'));
+    copy.onclick=async()=>{ const msg=T('[KICKSTART UP 원정 틀] ')+t.name+'\n'+location.origin+location.pathname+T('\n지도자 로그인 → 새 원정 만들기 → 「다른 지도자의 복사 번호로 가져오기」\n복사 번호: ')+t.tpl_code;
+      try{ await navigator.clipboard.writeText(msg); toast(T('복사했습니다')); }catch(e){ toast(T('복사가 안 됩니다. 번호를 직접 알려 주세요')); } };
+    const cb=h('input',{type:'checkbox'}); cb.checked=!!t.tpl_contacts;
+    cb.onchange=async()=>{ const r=await S.sb.from('tour_tours').update({tpl_contacts:cb.checked}).eq('id',t.id); if(r.error){ toast(errText(r.error)); cb.checked=!cb.checked; } else t.tpl_contacts=cb.checked; };
+    body.append(h('div',{class:'big',style:'font-size:40px;letter-spacing:.14em;text-align:center;font-weight:800'},t.tpl_code), copy,
+      h('label',{class:'row-item',style:'cursor:pointer'},cb,h('span',{class:'row-body'},h('span',{class:'ttl',text:T('긴급 연락처·방문지 연락처도 함께 넘기기')}),h('span',{class:'muted',text:T('끄면 대사관·병원 번호와 현지 담당자 연락처는 넘어가지 않습니다')}))),
+      armButton(h('button',{class:'btn btn-ghost wide',type:'button'},T('공유 그만하기')),T('번호가 사라집니다'),async()=>{ const r=await S.sb.from('tour_tours').update({tpl_code:null}).eq('id',t.id); if(r.error){ toast(errText(r.error)); return; } t.tpl_code=null; toast(T('공유를 껐습니다')); draw(); })); };
+  draw(); openSheet(T('원정 틀 공유')+' · '+t.name,[body]);
+}
 async function screenTours(){
   topRight(h('button',{class:'linkbtn',type:'button',onclick:logout},T('로그아웃')));
   const r=await S.sb.from('tour_tours').select('*').eq('owner_id',S.uid).order('created_at',{ascending:false});
@@ -892,11 +943,29 @@ async function screenTours(){
   const name=h('input',{class:'in',id:'tName',placeholder:T('2027 유럽 순회시범')});
   const st=h('input',{class:'in',type:'date',id:'tStart'}), en=h('input',{class:'in',type:'date',id:'tEnd'});
   const mk=h('button',{class:'btn btn-red',type:'button'},T('새 원정 만들기'));
+  // 원정 틀: 빈 원정 / 내 원정 복사 / 다른 지도자 복사 번호
+  const tplSel=h('select',{class:'in'},h('option',{value:''},T('빈 원정으로 시작')),
+    S.tours.map(t=>h('option',{value:t.id},T('복사: ')+t.name)), h('option',{value:'@code'},T('다른 지도자의 복사 번호로 가져오기')));
+  const tplCode=h('input',{class:'in',placeholder:T('예: T7K2QX'),autocapitalize:'characters',style:'text-transform:uppercase;letter-spacing:.12em'});
+  const PARTS=[['stops','일정'],['checklist','준비물'],['emergency','긴급 연락처'],['cues','공연 순서표'],['guides','관광 해설']];
+  const parts=new Set(PARTS.map(x=>x[0]));
+  const partBox=h('div',{class:'catsel',role:'group','aria-label':T('복사할 것'),style:'flex-wrap:wrap'},PARTS.map(([k,l])=>{ const b=h('button',{type:'button','aria-pressed':'true'},T(l)); b.onclick=()=>{ parts.has(k)?parts.delete(k):parts.add(k); b.setAttribute('aria-pressed',String(parts.has(k))); }; return b; }));
+  const codeWrap=h('label',{class:'f',hidden:true},T('복사 번호'),tplCode);
+  const tplWrap=h('div',{class:'stack',hidden:true},codeWrap,h('div',{class:'f'},h('span',{text:T('복사할 것')}),partBox),
+    h('p',{class:'muted',style:'margin:0;font-size:13px',text:T('출발일을 넣으면 일정 날짜가 새 출발일에 맞게 옮겨집니다. 단원 명단·공지·사진은 복사되지 않습니다.')}));
+  tplSel.onchange=()=>{ tplWrap.hidden=!tplSel.value; codeWrap.hidden=tplSel.value!=='@code';
+    const src=S.tours.find(t=>t.id===tplSel.value); if(src&&!name.value.trim()) name.value=src.name+' '+T('(복사)'); };
   mk.onclick=async()=>{
     if(!name.value.trim()){ toast(T('원정 이름을 넣어 주세요')); name.focus(); return; }
     if(st.value&&en.value&&en.value<st.value){ toast(T('돌아오는 날이 출발일보다 빠릅니다')); return; }
+    if(tplSel.value==='@code'&&!tplCode.value.trim()){ toast(T('복사 번호를 넣어 주세요')); tplCode.focus(); return; }
     mk.disabled=true;
     try{
+      if(tplSel.value){
+        const r=await S.sb.rpc('tour_clone',{p_src:tplSel.value==='@code'?null:tplSel.value,p_tpl:tplSel.value==='@code'?tplCode.value.trim().toUpperCase():null,p_name:name.value.trim(),p_start:st.value||null,p_end:en.value||null,p_parts:[...parts]});
+        if(r.error) throw r.error;
+        toast(T('원정 틀을 복사해 새 원정을 만들었습니다')); openTour(r.data,'schedule'); return;
+      }
       let res; for(let i=0;i<5;i++){ res=await S.sb.from('tour_tours').insert({name:name.value.trim(),code:genCode(),start_date:st.value||null,end_date:en.value||null,owner_id:S.uid}).select().single(); if(!res.error||res.error.code!=='23505') break; }
       if(res.error) throw res.error;
       toast(T('원정을 만들었습니다')); openTour(res.data,'members');
@@ -908,10 +977,11 @@ async function screenTours(){
       h('button',{class:'row-body',type:'button',onclick:()=>openTour(t)},
         h('span',{class:'ttl',text:t.name}),
         h('span',{class:'muted',text:[t.start_date&&dayLabel(t.start_date),t.end_date&&dayLabel(t.end_date)].filter(Boolean).join(' ~ ')||T('날짜 미정')}),
-        h('span',{class:'muted',text:T('초대 번호 ')+t.code})),
-      h('span',{class:'maplink','aria-hidden':'true'},T('열기')))))
+        h('span',{class:'muted',text:T('초대 번호 ')+t.code+(t.tpl_code?' · '+T('틀 공유 중'):'')})),
+      h('button',{class:'linkbtn',type:'button',style:'white-space:nowrap',onclick:()=>tplShareSheet(t)},T('틀 공유')))))
       : h('div',{class:'empty'},h('strong',{text:T('아직 원정이 없습니다')}),h('span',{text:T('아래에서 첫 원정을 만들어 주세요.')})),
     h('section',{class:'panel'},h('h2',{text:T('새 원정 만들기')}),
+      h('label',{class:'f'},T('원정 틀'),tplSel), tplWrap,
       h('label',{class:'f'},T('원정 이름'),name),
       h('div',{class:'grid2'},h('label',{class:'f'},T('출발일 (1일째)'),st),h('label',{class:'f'},T('돌아오는 날'),en)), mk));
 }

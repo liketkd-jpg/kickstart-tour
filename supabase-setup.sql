@@ -423,3 +423,65 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ===== 원정 틀 복사: 내 원정 복사 + 다른 지도자에게 복사 번호로 넘겨주기 =====
+alter table public.tour_tours add column if not exists tpl_code text;
+alter table public.tour_tours add column if not exists tpl_contacts boolean not null default false;
+create unique index if not exists tour_tours_tpl_code on public.tour_tours(tpl_code) where tpl_code is not null;
+
+-- p_src: 내 원정 id (내 것일 때) / p_tpl: 다른 지도자가 준 복사 번호
+-- p_parts: 'stops','checklist','emergency','cues','guides' 중 복사할 것
+create or replace function public.tour_clone(p_src uuid, p_tpl text, p_name text, p_start date, p_end date, p_parts text[])
+returns json language plpgsql security definer set search_path = public as $$
+declare s tour_tours; n tour_tours; me uuid := auth.uid(); shift int := 0; c text; i int; mine boolean;
+  A text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; st record; nid uuid;
+begin
+  if me is null then raise exception 'not_signed_in'; end if;
+  if p_src is not null then
+    select * into s from tour_tours where id = p_src and owner_id = me;
+  elsif coalesce(trim(p_tpl), '') <> '' then
+    select * into s from tour_tours where tpl_code = upper(trim(p_tpl));
+  end if;
+  if s.id is null then raise exception 'no_template'; end if;
+  mine := s.owner_id = me;
+  if coalesce(trim(p_name), '') = '' then raise exception 'no_name'; end if;
+  if p_start is not null and s.start_date is not null then shift := p_start - s.start_date; end if;
+  for i in 1 .. 8 loop
+    c := '';
+    for j in 1 .. 6 loop c := c || substr(A, 1 + floor(random() * length(A))::int, 1); end loop;
+    exit when not exists (select 1 from tour_tours where code = c);
+  end loop;
+  insert into tour_tours (owner_id, name, code, start_date, end_date, emergency, checklist)
+  values (me, left(trim(p_name), 80), c, p_start,
+          coalesce(p_end, case when s.end_date is not null and p_start is not null then s.end_date + shift end),
+          case when 'emergency' = any(p_parts) and (mine or s.tpl_contacts) then s.emergency else '[]'::jsonb end,
+          case when 'checklist' = any(p_parts) then s.checklist else '[]'::jsonb end)
+  returning * into n;
+
+  create temp table if not exists _tour_stop_map (old uuid primary key, new uuid) on commit drop;
+  delete from _tour_stop_map;
+  if 'stops' = any(p_parts) then
+    for st in select * from tour_stops where tour_id = s.id loop
+      insert into tour_stops (tour_id, date, time, type, title, place, city, contact, memo)
+      values (n.id, st.date + shift, st.time, st.type, st.title, st.place, st.city,
+              case when mine or s.tpl_contacts then st.contact else '' end, st.memo)
+      returning id into nid;
+      insert into _tour_stop_map values (st.id, nid);
+    end loop;
+  end if;
+  if 'cues' = any(p_parts) then
+    insert into tour_cues (tour_id, stop_id, seq, title, music, who, props, duration)
+    select n.id, m.new, q.seq, q.title, q.music, case when mine then q.who else '' end, q.props, q.duration
+    from tour_cues q left join _tour_stop_map m on m.old = q.stop_id
+    where q.tour_id = s.id and (q.stop_id is null or m.new is not null);
+  end if;
+  if 'guides' = any(p_parts) then
+    insert into tour_guides (tour_id, stop_id, title, script, source_url)
+    select n.id, m.new, g.title, g.script, g.source_url
+    from tour_guides g left join _tour_stop_map m on m.old = g.stop_id
+    where g.tour_id = s.id;
+  end if;
+  return row_to_json(n);
+end; $$;
+revoke all on function public.tour_clone(uuid, text, text, date, date, text[]) from public;
+grant execute on function public.tour_clone(uuid, text, text, date, date, text[]) to authenticated;
