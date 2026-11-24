@@ -345,6 +345,39 @@ const EN={'일':"Sun",
 '구글 지도에서 「공유 → 링크 복사」 후 붙여 넣기':"In Google Maps: Share → Copy link, then paste",
 'AI 해설 만들기':"Write guide with AI",
 '자세한 내용':"Details",
+'환율 계산':"Currency converter",
+'현지 시간':"Local time",
+'한국 시간':"Korea time",
+'이 휴대폰 시간':"This phone",
+'날씨 불러오는 중…':"Loading weather…",
+'날씨를 불러오지 못했습니다':"Couldn't load weather",
+'맑음':"Clear",
+'대체로 맑음':"Mostly clear",
+'구름 조금':"Partly cloudy",
+'흐림':"Cloudy",
+'안개':"Fog",
+'이슬비':"Drizzle",
+'어는 비':"Freezing rain",
+'비':"Rain",
+'강한 비':"Heavy rain",
+'눈':"Snow",
+'많은 눈':"Heavy snow",
+'싸락눈':"Snow grains",
+'소나기':"Showers",
+'강한 소나기':"Heavy showers",
+'눈 소나기':"Snow showers",
+'뇌우':"Thunderstorm",
+'비 올 확률 ':"Rain ",
+'내일 ':"Tomorrow ",
+'우산':"Umbrella",
+'원':" KRW",
+'유로':"Euro",
+'체코 코루나':"Czech koruna",
+'미국 달러':"US dollar",
+'환율을 아직 받지 못했습니다. 인터넷에 연결되면 다시 열어 주세요.':"No exchange rates yet. Open again when you're online.",
+'기준: ':"Rate date: ",
+'유럽중앙은행 기준 환율':"European Central Bank reference rate",
+' · 실제 환전·카드 결제 금액은 수수료 때문에 조금 더 나올 수 있습니다.':" · Actual exchange or card charges may be slightly higher due to fees.",
 '주변 찾기':"Nearby",
 '지금 가까운 곳 찾기':"Find nearby now",
 '화장실':"Toilet",
@@ -1124,8 +1157,94 @@ async function leaveTour(){ closeTour(); store.set('tourToken',null); S.token=nu
 async function logout(){ closeTour(); await S.sb.auth.signOut(); S.session=null; S.uid=null; route(); }
 
 /* ---------- 공지 ---------- */
+/* ---------- 오늘의 날씨·현지 시간·한국 시간 + 환율 계산 ---------- */
+const CITY_EN={'베를린':'Berlin','프라하':'Prague','빈':'Vienna','비엔나':'Vienna','뮌헨':'Munich','프랑크푸르트':'Frankfurt','함부르크':'Hamburg','드레스덴':'Dresden','라이프치히':'Leipzig','쾰른':'Cologne','잘츠부르크':'Salzburg','인스브루크':'Innsbruck','부다페스트':'Budapest','브라티슬라바':'Bratislava','체스키크룸로프':'Cesky Krumlov','체스키 크룸로프':'Cesky Krumlov','브르노':'Brno','카를로비바리':'Karlovy Vary','파리':'Paris','런던':'London','로마':'Rome','밀라노':'Milan','베네치아':'Venice','바르샤바':'Warsaw','크라쿠프':'Krakow','취리히':'Zurich','암스테르담':'Amsterdam','브뤼셀':'Brussels','마드리드':'Madrid','바르셀로나':'Barcelona','리스본':'Lisbon','뉴욕':'New York','로스앤젤레스':'Los Angeles','토론토':'Toronto','도쿄':'Tokyo','서울':'Seoul','인천':'Incheon'};
+const WX={0:['☀️','맑음'],1:['🌤️','대체로 맑음'],2:['⛅','구름 조금'],3:['☁️','흐림'],45:['🌫️','안개'],48:['🌫️','안개'],51:['🌦️','이슬비'],53:['🌦️','이슬비'],55:['🌧️','이슬비'],56:['🌧️','어는 비'],57:['🌧️','어는 비'],61:['🌧️','비'],63:['🌧️','비'],65:['🌧️','강한 비'],66:['🌧️','어는 비'],67:['🌧️','어는 비'],71:['🌨️','눈'],73:['🌨️','눈'],75:['❄️','많은 눈'],77:['🌨️','싸락눈'],80:['🌦️','소나기'],81:['🌧️','소나기'],82:['⛈️','강한 소나기'],85:['🌨️','눈 소나기'],86:['🌨️','눈 소나기'],95:['⛈️','뇌우'],96:['⛈️','뇌우'],99:['⛈️','뇌우']};
+const wx=c=>WX[c]||['🌡️',''];
+const lsGet=k=>{ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } };
+const lsSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+async function getJSON(u){ const r=await fetch(u,{signal:AbortSignal.timeout?AbortSignal.timeout(12000):undefined}); if(!r.ok) throw new Error(r.status); return r.json(); }
+async function loadWeather(city){
+  const key='tourWx:'+city, c=lsGet(key); if(c&&Date.now()-c.at<30*60000) return c;
+  try{
+    let g=c&&c.geo;
+    if(!g){ const base=city.replace(/\(.*?\)/g,'').trim(), q=CITY_EN[base]||base;
+      const gj=await getJSON('https://geocoding-api.open-meteo.com/v1/search?count=1&format=json&language='+(LANG==='en'?'en':'ko')+'&name='+encodeURIComponent(q));
+      const r=gj.results&&gj.results[0]; if(!r) return c; g={lat:r.latitude,lng:r.longitude,name:r.name,tz:r.timezone}; }
+    const f=await getJSON('https://api.open-meteo.com/v1/forecast?latitude='+g.lat+'&longitude='+g.lng+'&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=3');
+    const out={at:Date.now(),geo:{...g,tz:f.timezone||g.tz},cur:f.current,daily:f.daily};
+    lsSet(key,out); return out;
+  }catch(e){ return c; }
+}
+async function loadRates(){
+  const key='tourFx', c=lsGet(key); if(c&&Date.now()-c.at<6*3600000) return c;
+  const tries=[
+    async()=>{ const j=await getJSON('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=KRW,CZK,USD'); return {date:j.date,src:'ECB',r:j.rates}; },
+    async()=>{ const j=await getJSON('https://api.frankfurter.app/latest?from=EUR&to=KRW,CZK,USD'); return {date:j.date,src:'ECB',r:j.rates}; },
+    async()=>{ const j=await getJSON('https://open.er-api.com/v6/latest/EUR'); return {date:(j.time_last_update_utc||'').slice(5,16),src:'ExchangeRate-API',r:{KRW:j.rates.KRW,CZK:j.rates.CZK,USD:j.rates.USD}}; }];
+  for(const t of tries){ try{ const o=await t(); if(o.r&&o.r.KRW&&o.r.CZK&&o.r.USD){ const v={at:Date.now(),date:o.date,src:o.src,per:{EUR:1,...o.r}}; lsSet(key,v); return v; } }catch(e){} }
+  return c;
+}
+const clockFmt=(tz)=>{ try{ return new Intl.DateTimeFormat(LANG==='en'?'en-GB':'ko-KR',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()); }catch(e){ return '--:--'; } };
+const tzDiff=(tz)=>{ try{ const n=new Date(), f=z=>new Date(n.toLocaleString('en-US',{timeZone:z})); return Math.round((f('Asia/Seoul')-f(tz))/3600000); }catch(e){ return null; } };
+let clockTimer=null;
+function tickClocks(){ document.querySelectorAll('[data-clock]').forEach(el=>{ el.textContent=clockFmt(el.dataset.clock); }); }
+function dayInfoCard(){
+  const city=exDefaultCity();
+  const card=h('section',{class:'panel',style:'gap:10px'});
+  const wxRow=h('div',{style:'display:flex;align-items:center;gap:12px;min-height:44px'});
+  const timeRow=h('div',{style:'display:grid;grid-template-columns:1fr 1fr;gap:8px'});
+  const fxBtn=h('button',{class:'btn btn-navy',type:'button',style:'min-height:44px',onclick:fxSheet},'💱 '+T('환율 계산'));
+  const fxLine=h('span',{class:'muted',style:'font-size:12.5px'});
+  const clockBox=(label,tz)=>h('div',{style:'background:var(--soft);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column'},h('span',{class:'muted',style:'font-size:12px',text:label}),h('b',{style:'font-size:22px;font-variant-numeric:tabular-nums','data-clock':tz,text:clockFmt(tz)}));
+  const drawTime=(tz,name)=>{ timeRow.replaceChildren(); const d=tz?tzDiff(tz):null;
+    if(tz&&tz!=='Asia/Seoul') timeRow.append(clockBox(T('현지 시간')+(name?' · '+name:''),tz), clockBox(T('한국 시간')+(d?' ('+(d>0?'+':'')+d+T('시간')+')':''),'Asia/Seoul'));
+    else timeRow.append(clockBox(T('한국 시간'),'Asia/Seoul'), clockBox(T('이 휴대폰 시간'),Intl.DateTimeFormat().resolvedOptions().timeZone)); };
+  drawTime(null,'');
+  if(city){ wxRow.append(h('span',{class:'muted',text:T('날씨 불러오는 중…')}));
+    loadWeather(city).then(w=>{ wxRow.replaceChildren();
+      if(!w||!w.cur){ wxRow.append(h('span',{class:'muted',text:T('날씨를 불러오지 못했습니다')+' · '+city})); return; }
+      const [ic,tx]=wx(w.cur.weather_code), dd=w.daily||{}, i=0;
+      const rain=dd.precipitation_probability_max?dd.precipitation_probability_max[i]:null;
+      wxRow.append(h('span',{style:'font-size:38px;line-height:1','aria-hidden':'true',text:ic}),
+        h('div',{style:'display:flex;flex-direction:column;min-width:0;flex:1'},
+          h('b',{style:'font-size:17px',text:city+' · '+Math.round(w.cur.temperature_2m)+'°'+(tx?' '+T(tx):'')}),
+          h('span',{class:'muted',style:'font-size:13px',text:T('오늘')+' '+Math.round(dd.temperature_2m_min[i])+'° / '+Math.round(dd.temperature_2m_max[i])+'°'+(rain!=null?' · '+T('비 올 확률 ')+rain+'%':'')+(dd.weather_code&&dd.weather_code[1]!=null?' · '+T('내일 ')+wx(dd.weather_code[1])[0]+' '+Math.round(dd.temperature_2m_min[1])+'°/'+Math.round(dd.temperature_2m_max[1])+'°':'')})));
+      if(rain!=null&&rain>=50) wxRow.append(h('span',{class:'pill',text:'☂ '+T('우산')}));
+      drawTime(w.geo&&w.geo.tz, city); });
+  }
+  loadRates().then(r=>{ if(r&&r.per) fxLine.textContent='1 € = '+Math.round(r.per.KRW).toLocaleString()+T('원')+' · 1 Kč = '+(r.per.KRW/r.per.CZK).toFixed(1)+T('원')+' · 1 $ = '+Math.round(r.per.KRW/r.per.USD).toLocaleString()+T('원'); });
+  if(!clockTimer) clockTimer=setInterval(tickClocks,20000);
+  card.append(city?wxRow:null, timeRow, h('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap'},fxBtn,fxLine));
+  return card;
+}
+const CUR=[['EUR','€','유로'],['CZK','Kč','체코 코루나'],['USD','$','미국 달러'],['KRW','₩','원']];
+function fxSheet(){
+  const st={cur:store.get('fxCur')||'EUR',amt:''};
+  const body=h('div',{class:'stack'});
+  const amt=h('input',{class:'in',inputmode:'decimal',placeholder:'0',style:'font-size:34px;font-weight:800;text-align:right;height:64px;font-variant-numeric:tabular-nums'});
+  const chips=h('div',{class:'catsel',style:'display:grid;grid-template-columns:repeat(4,1fr)'});
+  const out=h('div',{class:'stack',style:'gap:8px'}); const info=h('p',{class:'muted',style:'margin:0;font-size:12.5px;line-height:1.6'});
+  let R=lsGet('tourFx');
+  const fmt=(v,c)=>c==='KRW'?Math.round(v).toLocaleString()+T('원'):c==='CZK'?v.toLocaleString(undefined,{maximumFractionDigits:0})+' Kč':(c==='EUR'?'€ ':'$ ')+v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const draw=()=>{ chips.replaceChildren(...CUR.map(([c,sym,ko])=>h('button',{type:'button','aria-pressed':String(st.cur===c),style:'height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0 4px;white-space:nowrap',onclick:()=>{ st.cur=c; store.set('fxCur',c); draw(); amt.focus(); }},h('b',{text:sym+' '+c}),h('small',{style:'font-size:10.5px;opacity:.8;overflow:hidden;text-overflow:ellipsis;max-width:100%',text:T(ko)}))));
+    out.replaceChildren();
+    if(!R||!R.per){ out.append(h('div',{class:'banner'},T('환율을 아직 받지 못했습니다. 인터넷에 연결되면 다시 열어 주세요.'))); return; }
+    const a=parseFloat(String(amt.value).replace(/,/g,''))||0;
+    CUR.filter(x=>x[0]!==st.cur).forEach(([c,sym,ko])=>{ const v=a/R.per[st.cur]*R.per[c];
+      out.append(h('div',{style:'display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-radius:12px;background:'+(c==='KRW'?'var(--hero);color:#fff':'var(--soft)')},
+        h('span',{style:'font-size:14px;opacity:.85',text:T(ko)}),h('b',{style:'font-size:'+(c==='KRW'?'26px':'19px')+';font-variant-numeric:tabular-nums',text:fmt(v,c)}))); });
+    info.textContent=T('기준: ')+(R.date||'')+' · '+(R.src==='ECB'?T('유럽중앙은행 기준 환율'):R.src)+T(' · 실제 환전·카드 결제 금액은 수수료 때문에 조금 더 나올 수 있습니다.');
+  };
+  amt.oninput=draw;
+  const quick=h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'},[5,10,20,50,100,500].map(n=>h('button',{class:'maplink',type:'button',onclick:()=>{ amt.value=String(n); draw(); }},String(n))));
+  body.append(chips,amt,quick,out,info);
+  openSheet(T('환율 계산'),[body]); draw(); setTimeout(()=>amt.focus(),80);
+  loadRates().then(r=>{ if(r){ R=r; draw(); } });
+}
 function viewNotices(){
   const wrap=h('div',{class:'stack'});
+  wrap.append(dayInfoCard());
   const pc=pushCard(); if(pc) wrap.append(pc);
   { const eb=examBanner(); if(eb) wrap.append(eb); }
   const bc=briefCard(); if(bc) wrap.append(bc);
