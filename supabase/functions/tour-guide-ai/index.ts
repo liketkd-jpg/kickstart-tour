@@ -74,7 +74,53 @@ async function pickModels(key: string): Promise<{ models: string[]; err?: string
   }
 }
 
-async function gemini(place: string, lang: string) {
+type Task = { prompt: string; plainHint: string; schema: unknown; fromJson: (o: any) => Record<string, unknown> | null; fromText: (t: string) => Record<string, unknown> | null };
+
+function guideTask(place: string, lang: string): Task {
+  return {
+    prompt: PROMPT(place, lang),
+    plainHint: lang === 'en' ? ' Put only the title on the first line, then the script.' : ' 첫 줄에는 장소 이름만 쓰고, 다음 줄부터 해설을 써 줘.',
+    schema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, script: { type: 'STRING' } }, required: ['title', 'script'] },
+    fromJson: (o) => o?.script ? { title: String(o.title || place).slice(0, 60), script: String(o.script).trim().slice(0, 6000) } : null,
+    fromText: (text) => {
+      const lines = text.replace(/^[#*\s]+/, '').split('\n');
+      const title = lines[0].replace(/[#*「」"]/g, '').trim();
+      const script = lines.slice(1).join('\n').replace(/[#*]/g, '').trim();
+      return { title: (script ? title : place).slice(0, 60), script: (script || text).slice(0, 6000) };
+    },
+  };
+}
+
+// 관광 명소 / 가성비 식당 다섯 곳 추천
+const FOOD: Record<string, string> = { local: '그 지역 전통·현지 음식', korean: '한식', chinese: '중식', asian: '아시아 음식(일식·베트남·태국 등)', quick: '빠르고 싼 한 끼(빵집·푸드코트·패스트푸드 등)', any: '종류 상관없이' };
+function placesTask(city: string, kind: string, food: string, lang: string): Task {
+  const en = lang === 'en';
+  const what = kind === 'food'
+    ? (en ? `5 good-value restaurants (${food}) that a group of 15 Korean students and leaders could visit, cheap to mid-price, well reviewed, near central/tourist areas`
+          : `${FOOD[food] || FOOD.any} 식당 가운데 학생·지도자 15명 단체가 가기 좋은 가성비 좋은 곳 5곳 (싸거나 보통 가격, 평이 좋은 곳, 시내·관광지 가까운 곳)`)
+    : (en ? '5 must-see tourist attractions for a Korean youth taekwondo demonstration team' : '중고등학생 태권도 시범단이 꼭 가 볼 만한 대표 관광 명소 5곳');
+  const prompt = en
+    ? `City: ${city}. Recommend ${what}. Use only real places you are confident still exist; prefer long-established, well-known places. For each give: name (common English name), local (name in local language as on Google Maps), area (district), address (street address if confident, else empty), desc (one or two short sentences: what it is / what to order or see), price (e.g. "€", "€€", "free", or entry fee), tip (one short practical tip). Answer in English.`
+    : `도시: ${city}. ${what}을 추천해 줘. 지금도 있다고 확신하는 실제 장소만, 오래되고 잘 알려진 곳 위주로. 각 곳마다 name(한국어 이름), local(구글 지도에 나오는 현지어/영어 이름), area(동네·구역), address(확실하면 거리 주소, 모르면 빈칸), desc(무엇인지·무엇을 먹거나 볼지 한두 문장), price(예: "€", "€€", "무료", 입장료), tip(짧은 실용 팁 하나)을 한국어로 써 줘.`;
+  const item = { type: 'OBJECT', properties: { name: { type: 'STRING' }, local: { type: 'STRING' }, area: { type: 'STRING' }, address: { type: 'STRING' }, desc: { type: 'STRING' }, price: { type: 'STRING' }, tip: { type: 'STRING' } }, required: ['name', 'local', 'desc'] };
+  const clean = (arr: any[]) => {
+    const list = (Array.isArray(arr) ? arr : []).filter((x) => x && x.name).slice(0, 5).map((x) => {
+      const o: Record<string, string> = {};
+      for (const k of ['name', 'local', 'area', 'address', 'desc', 'price', 'tip']) o[k] = String(x[k] || '').slice(0, 300);
+      return o;
+    });
+    return list.length ? { places: list } : null;
+  };
+  return {
+    prompt,
+    plainHint: en ? ' Reply with only a JSON array of 5 objects with those keys.' : ' 그 열쇠 이름을 가진 객체 5개짜리 JSON 배열만 답해 줘.',
+    schema: { type: 'OBJECT', properties: { places: { type: 'ARRAY', items: item } }, required: ['places'] },
+    fromJson: (o) => clean(Array.isArray(o) ? o : o?.places),
+    fromText: (t) => { const m = t.match(/\[[\s\S]*\]/); if (!m) return null; try { return clean(JSON.parse(m[0])); } catch { return null; } },
+  };
+}
+
+async function gemini(task: Task) {
   const key = (Deno.env.get('GEMINI_API_KEY') || '').trim();
   if (!key) return { error: 'no_key' };
   const { models, err } = await pickModels(key);
@@ -95,9 +141,9 @@ async function gemini(place: string, lang: string) {
       if (!cfg.thinkingConfig) delete cfg.thinkingConfig;
       if (jsonMode) {
         cfg.responseMimeType = 'application/json';
-        cfg.responseSchema = { type: 'OBJECT', properties: { title: { type: 'STRING' }, script: { type: 'STRING' } }, required: ['title', 'script'] };
+        cfg.responseSchema = task.schema;
       }
-      const prompt = PROMPT(place, lang) + (jsonMode ? '' : (lang === 'en' ? ' Put only the title on the first line, then the script.' : ' 첫 줄에는 장소 이름만 쓰고, 다음 줄부터 해설을 써 줘.'));
+      const prompt = task.prompt + (jsonMode ? '' : task.plainHint);
       let r: Response;
       try {
         r = await fetch(`${API}/models/${model}:generateContent`, {
@@ -121,16 +167,16 @@ async function gemini(place: string, lang: string) {
       if (!text) { notes.push(`${model}: empty ${c?.finishReason || d?.promptFeedback?.blockReason || ''}`); if (jsonMode) continue; break; }
       if (jsonMode) {
         try {
-          const o = JSON.parse(text);
-          if (o?.script) return { title: String(o.title || place).slice(0, 60), script: String(o.script).trim().slice(0, 6000), model };
+          const got = task.fromJson(JSON.parse(text));
+          if (got) return { ...got, model };
         } catch { /* 일반 글 방식으로 다시 */ }
         notes.push(`${model}: bad json ${c?.finishReason || ''}`);
         continue;
       }
-      const lines = text.replace(/^[#*\s]+/, '').split('\n');
-      const title = lines[0].replace(/[#*「」"]/g, '').trim();
-      const script = lines.slice(1).join('\n').replace(/[#*]/g, '').trim();
-      return { title: (script ? title : place).slice(0, 60), script: (script || text).slice(0, 6000), model };
+      const got = task.fromText(text);
+      if (got) return { ...got, model };
+      notes.push(`${model}: bad text`);
+      break;
     }
   }
   return { error: quota ? 'quota' : 'ai_failed', detail: notes.slice(-4).join(' | ').slice(0, 400) };
@@ -139,7 +185,7 @@ async function gemini(place: string, lang: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
-    const { tour_id, input, lang } = await req.json();
+    const { tour_id, input, lang, mode, city, kind, food } = await req.json();
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     // 이 원정의 지도자만 쓸 수 있음 (사용량 보호)
@@ -148,6 +194,13 @@ Deno.serve(async (req) => {
     if (!who?.user) return json({ error: 'not_signed_in' });
     const { data: tour } = await admin.from('tour_tours').select('id').eq('id', tour_id).eq('owner_id', who.user.id).maybeSingle();
     if (!tour) return json({ error: 'not_owner' });
+
+    if (mode === 'places') {
+      const c = String(city || '').trim().slice(0, 80);
+      if (!c) return json({ error: 'empty' });
+      const out = await gemini(placesTask(c, kind === 'food' ? 'food' : 'sight', String(food || 'any'), lang === 'en' ? 'en' : 'ko'));
+      return json({ city: c, ...out });
+    }
 
     const raw = String(input || '').trim().slice(0, 2000);
     if (!raw) return json({ error: 'empty' });
@@ -162,7 +215,7 @@ Deno.serve(async (req) => {
       if (!place) return json({ error: 'no_place' });
       if (p.name && p.lat) place = `${p.name} (위도 ${p.lat}, 경도 ${p.lng})`;
     }
-    const out = await gemini(place, lang === 'en' ? 'en' : 'ko');
+    const out = await gemini(guideTask(place, lang === 'en' ? 'en' : 'ko'));
     return json({ place, ...out });
   } catch (e) {
     return json({ error: String(e) }, 500);

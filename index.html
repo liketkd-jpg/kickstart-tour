@@ -345,6 +345,36 @@ const EN={'일':"Sun",
 '구글 지도에서 「공유 → 링크 복사」 후 붙여 넣기':"In Google Maps: Share → Copy link, then paste",
 'AI 해설 만들기':"Write guide with AI",
 '자세한 내용':"Details",
+'주변 찾기':"Nearby",
+'지금 가까운 곳 찾기':"Find nearby now",
+'화장실':"Toilet",
+'약국':"Pharmacy",
+'편의점·마트':"Shop",
+'병원':"Hospital",
+'환전·ATM':"ATM / exchange",
+'카페':"Cafe",
+'누르면 구글 지도가 열리고 지금 있는 곳 근처를 찾아 줍니다. 별점·영업시간도 거기서 볼 수 있습니다.':"Opens Google Maps near where you are. Ratings and opening hours are there too.",
+'관광 명소':"Sights",
+'식당':"Restaurants",
+'관광 명소·식당 추천':"Sights & restaurants",
+'현지 음식':"Local food",
+'한식':"Korean",
+'중식':"Chinese",
+'아시아 음식':"Asian",
+'빠른 한 끼':"Quick & cheap",
+'AI로 가성비 식당 5곳 추천받기':"Get 5 good-value restaurants (AI)",
+'AI로 관광 명소 5곳 추천받기':"Get 5 top sights (AI)",
+'도시를 넣어 주세요':"Please enter a city.",
+'AI가 고르는 중… (10~30초)':"AI is choosing… (10–30 s)",
+'AI 서버에 닿지 못했습니다. 해설 서버(tour-guide-ai) 코드를 새로 붙여 넣어 배포해 주세요':"Couldn't reach the AI server. Re-deploy tour-guide-ai with the new code.",
+'구글 지도에서 별점 높은 곳 직접 보기':"Browse top-rated places on Google Maps",
+'추천 식당':"Recommended restaurants",
+'추천 관광 명소':"Recommended sights",
+'AI 추천 ':"AI pick ",
+'구글 지도 (별점·영업시간)':"Google Maps (ratings & hours)",
+'여기로 모이기 공지':"Meet here (notice)",
+'AI 추천은 문을 닫았거나 정보가 바뀐 곳이 있을 수 있습니다. 가기 전에 구글 지도에서 별점·영업시간을 꼭 확인하세요.':"AI picks may include places that closed or changed. Check ratings and hours on Google Maps before you go.",
+'위 단추로 구글 지도에서 관광 명소와 식당을 찾아보세요.':"Use the button above to find sights and restaurants on Google Maps.",
 '복사 번호가 맞지 않습니다. 다시 확인해 주세요':"That template code doesn't match. Please check it.",
 '설정 글을 한 번 더 실행해 주세요 (supabase-setup.sql)':"Please run the setup SQL again (supabase-setup.sql).",
 '빈 원정으로 시작':"Start from blank",
@@ -1105,6 +1135,7 @@ function viewNotices(){
     const date=h('input',{class:'in',type:'date',id:'nDate',value:today()});
     const time=h('input',{class:'in',type:'time',id:'nTime'});
     const msg=h('textarea',{class:'in',id:'nMsg',placeholder:T('예: 도복 가방 챙겨서 모이세요. 리허설 장소로 함께 걸어갑니다.')});
+    if(S.noticeDraft){ place.value=S.noticeDraft.place||''; link.value=S.noticeDraft.link||''; msg.value=S.noticeDraft.msg||''; S.noticeDraft=null; setTimeout(()=>{ time.focus(); time.scrollIntoView({block:'center'}); },200); }
     const send=h('button',{class:'btn btn-red',type:'button'},T('단원에게 공지 올리기'));
     send.onclick=async()=>{
       const p=place.value.trim(), l=link.value.trim();
@@ -1302,9 +1333,79 @@ function guideSheet(g){
 function rateChips(){
   return h('div',{class:'catsel',role:'group','aria-label':T('읽는 빠르기')},[['0.85',T('천천히')],['1',T('보통')],['1.2',T('빠르게')]].map(([v,l])=>h('button',{type:'button','aria-pressed':String(S.rate===Number(v)),onclick:()=>{ S.rate=Number(v); store.set('ttsRate',v); render(); }},l)));
 }
+/* ---------- 주변 찾기: 가까운 화장실·약국 + 관광 명소·식당 다섯 곳 추천 ---------- */
+const NEAR=[['🚻','화장실','public toilet'],['💊','약국','pharmacy'],['🛒','편의점·마트','supermarket'],['🏥','병원','hospital'],['💱','환전·ATM','ATM currency exchange'],['☕','카페','cafe']];
+const FOODS=[['local','현지 음식','local food restaurant'],['korean','한식','korean restaurant'],['chinese','중식','chinese restaurant'],['asian','아시아 음식','asian restaurant'],['quick','빠른 한 끼','cheap eats']];
+const gmSearch=q=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q);
+function exCities(){ return [...new Set(S.stops.map(s=>s.city).filter(Boolean))]; }
+function exDefaultCity(){ const t=today(), st=[...S.stops].filter(s=>s.city).sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
+  const now=st.filter(s=>s.date<=t).pop()||st.find(s=>s.date>=t); return now?now.city:''; }
+function exKey(){ return 'tourEx:'+(S.tour&&S.tour.id)+':'+LANG+':'+S.exCity+':'+S.exKind+':'+(S.exKind==='food'?S.exFood:''); }
+function exPos(){ try{ if(!navigator.geolocation||!navigator.permissions) return; navigator.permissions.query({name:'geolocation'}).then(st=>{ if(st.state==='granted') navigator.geolocation.getCurrentPosition(p=>{ S.pos={lat:p.coords.latitude,lng:p.coords.longitude,at:Date.now()}; },()=>{},{maximumAge:300000,timeout:8000}); }).catch(()=>{}); }catch(e){} }
+function nearUrl(term){ const p=S.pos&&Date.now()-S.pos.at<15*60000?S.pos:null;
+  return p?'https://www.google.com/maps/search/'+encodeURIComponent(term)+'/@'+p.lat.toFixed(5)+','+p.lng.toFixed(5)+',16z':gmSearch(term+' near me'); }
+function viewExplore(){
+  const wrap=h('div',{class:'stack'}); exPos();
+  if(S.exCity==null) S.exCity=exDefaultCity(); S.exKind=S.exKind||'sight'; S.exFood=S.exFood||'local';
+  // 1) 가까운 곳 바로 찾기 (모두)
+  wrap.append(h('section',{class:'panel'},h('h2',{text:T('지금 가까운 곳 찾기')}),
+    h('div',{style:'display:grid;grid-template-columns:repeat(3,1fr);gap:8px'},NEAR.map(([ic,ko,q])=>h('a',{class:'feat',href:nearUrl(q),target:'_blank',rel:'noopener',style:'display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;text-decoration:none;text-align:center'},h('span',{style:'font-size:26px','aria-hidden':'true',text:ic}),h('span',{style:'font-size:13.5px;font-weight:700;color:var(--ink)',text:T(ko)})))),
+    h('span',{class:'muted',style:'font-size:12.5px',text:T('누르면 구글 지도가 열리고 지금 있는 곳 근처를 찾아 줍니다. 별점·영업시간도 거기서 볼 수 있습니다.')})));
+  // 2) 도시 고르기
+  const cities=exCities(); const cityIn=h('input',{class:'in',value:S.exCity||'',placeholder:T('예: 프라하')}); cityIn.onchange=()=>{ S.exCity=cityIn.value.trim(); render(); };
+  const kindSeg=h('div',{class:'catsel',role:'group',style:'display:grid;grid-template-columns:1fr 1fr'},[['sight','관광 명소'],['food','식당']].map(([k,l])=>h('button',{type:'button','aria-pressed':String(S.exKind===k),style:'height:42px',onclick:()=>{ S.exKind=k; render(); }},T(l))));
+  const sec=h('section',{class:'panel'},h('h2',{text:T('관광 명소·식당 추천')}),
+    h('label',{class:'f'},T('도시'),cityIn),
+    cities.length>1?h('div',{class:'catsel',style:'flex-wrap:wrap'},cities.map(c=>h('button',{type:'button','aria-pressed':String(S.exCity===c),onclick:()=>{ S.exCity=c; render(); }},c))):null,
+    kindSeg,
+    S.exKind==='food'?h('div',{class:'catsel',style:'flex-wrap:wrap'},FOODS.map(([k,l])=>h('button',{type:'button','aria-pressed':String(S.exFood===k),onclick:()=>{ S.exFood=k; render(); }},T(l)))):null);
+  const city=S.exCity||'';
+  const fq=(FOODS.find(f=>f[0]===S.exFood)||FOODS[0])[2];
+  const mapQ=S.exKind==='food'?fq+' '+city:'top tourist attractions '+city;
+  // 3) AI 추천 (지도자) + 저장된 추천 보기
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem(exKey())||'null'); }catch(e){}
+  if(L()){
+    const ai=h('button',{class:'btn btn-red wide',type:'button'},'✦ '+(S.exKind==='food'?T('AI로 가성비 식당 5곳 추천받기'):T('AI로 관광 명소 5곳 추천받기')));
+    const err=h('div',{class:'banner',hidden:true,style:'font-size:13px;line-height:1.5;word-break:break-all;white-space:pre-wrap'});
+    ai.onclick=async()=>{ if(!city){ toast(T('도시를 넣어 주세요')); cityIn.focus(); return; }
+      ai.disabled=true; err.hidden=true; ai.textContent=T('AI가 고르는 중… (10~30초)'); const t0=Date.now();
+      try{ const {data,error}=await S.sb.functions.invoke('tour-guide-ai',{body:{tour_id:S.tour.id,mode:'places',city,kind:S.exKind,food:S.exFood,lang:LANG}});
+        if(error||!data){ err.hidden=false; err.textContent=T('AI 서버에 닿지 못했습니다. 해설 서버(tour-guide-ai) 코드를 새로 붙여 넣어 배포해 주세요')+' ('+Math.round((Date.now()-t0)/1000)+T('초')+')'; return; }
+        if(data.error||!data.places){ err.hidden=false; err.textContent=T(AI_ERR[data.error]||'AI가 글을 쓰지 못했습니다. 잠시 뒤 다시 해 보세요')+(data.detail?'\n['+T('자세한 내용')+'] '+data.detail:''); return; }
+        try{ localStorage.setItem(exKey(),JSON.stringify({at:Date.now(),places:data.places})); }catch(e){}
+        render();
+      }catch(e){ err.hidden=false; err.textContent=T('인터넷 연결을 확인해 주세요'); }
+      finally{ ai.disabled=false; } };
+    sec.append(ai,err);
+  }
+  sec.append(h('a',{class:'btn btn-ghost wide',href:gmSearch(mapQ),target:'_blank',rel:'noopener'},T('구글 지도에서 별점 높은 곳 직접 보기')));
+  wrap.append(sec);
+  if(saved&&saved.places){
+    const list=h('div',{class:'stack'});
+    list.append(h('div',{class:'row',style:'justify-content:space-between;align-items:center'},h('h2',{style:'margin:0;font-size:17px',text:(S.exKind==='food'?T('추천 식당'):T('추천 관광 명소'))+' · '+city}),h('span',{class:'muted',style:'font-size:12px',text:T('AI 추천 ')+new Date(saved.at).toLocaleDateString(LANG==='en'?'en-GB':'ko-KR',{month:'numeric',day:'numeric'})})));
+    saved.places.forEach((pl,i)=>{ const q=[pl.local||pl.name,pl.address,city].filter(Boolean).join(', ');
+      list.append(h('section',{class:'panel',style:'gap:8px'},
+        h('div',{style:'display:flex;gap:10px;align-items:flex-start'},h('span',{class:'pill',style:'flex-shrink:0',text:String(i+1)}),
+          h('div',{style:'min-width:0'},h('div',{style:'font-size:17px;font-weight:800',text:pl.name}),
+            h('div',{class:'muted',style:'font-size:13px',text:[pl.local&&pl.local!==pl.name?pl.local:'',pl.area,pl.price].filter(Boolean).join(' · ')}))),
+        pl.desc?h('p',{style:'margin:0;line-height:1.6',text:pl.desc}):null,
+        pl.tip?h('p',{class:'muted',style:'margin:0;font-size:13.5px',text:'💡 '+pl.tip}):null,
+        h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},
+          h('a',{class:'maplink',href:gmSearch(q),target:'_blank',rel:'noopener'},T('구글 지도 (별점·영업시간)')),
+          h('a',{class:'maplink',href:dirUrl(q),target:'_blank',rel:'noopener'},T('길 찾기')),
+          L()?h('button',{class:'maplink',type:'button',onclick:()=>{ S.noticeDraft={place:pl.name+(pl.local&&pl.local!==pl.name?' ('+pl.local+')':''),link:gmSearch(q),msg:pl.desc||''}; S.tab='notices'; render(); window.scrollTo(0,0); }},T('여기로 모이기 공지')):null)));
+    });
+    list.append(h('p',{class:'muted',style:'margin:0;font-size:12.5px;line-height:1.6',text:T('AI 추천은 문을 닫았거나 정보가 바뀐 곳이 있을 수 있습니다. 가기 전에 구글 지도에서 별점·영업시간을 꼭 확인하세요.')}));
+    wrap.append(list);
+  } else if(!L()){
+    wrap.append(h('div',{class:'empty'},h('span',{text:T('위 단추로 구글 지도에서 관광 명소와 식당을 찾아보세요.')})));
+  }
+  return wrap;
+}
 function viewGuide(){
-  const seg=h('div',{class:'catsel',role:'group','aria-label':T('가이드 종류'),style:'display:grid;grid-template-columns:1fr 1fr'},[['audio',T('해설 듣기')],['learn',T('현지어 배우기')]].map(([k,l])=>h('button',{type:'button',style:'height:44px;font-size:14px','aria-pressed':String((S.guideMode||'audio')===k),onclick:()=>{ S.guideMode=k; stopSpeak(); render(); }},l)));
+  const seg=h('div',{class:'catsel',role:'group','aria-label':T('가이드 종류'),style:'display:grid;grid-template-columns:1fr 1fr 1fr'},[['audio',T('해설 듣기')],['learn',T('현지어 배우기')],['explore',T('주변 찾기')]].map(([k,l])=>h('button',{type:'button',style:'height:44px;font-size:14px','aria-pressed':String((S.guideMode||'audio')===k),onclick:()=>{ S.guideMode=k; stopSpeak(); render(); }},l)));
   if(S.guideMode==='learn'){ const w=viewLearn(); w.prepend(seg); return w; }
+  if(S.guideMode==='explore'){ const w=viewExplore(); w.prepend(seg); return w; }
   const wrap=h('div',{class:'stack'}), lg=liveGuide();
   wrap.append(seg);
   if(!('speechSynthesis' in window)) wrap.append(h('div',{class:'banner'},h('span',{text:T('이 휴대폰 브라우저는 읽어 주기를 지원하지 않습니다. 해설 글을 읽어 주세요.')})));
