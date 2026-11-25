@@ -120,6 +120,23 @@ function placesTask(city: string, kind: string, food: string, lang: string): Tas
   };
 }
 
+// 견학 일기 영어 번역 (책자용)
+function translateTask(items: { id: string; cap?: string; seen?: string; felt?: string }[]): Task {
+  const src = items.map((x) => ({ id: String(x.id), cap: String(x.cap || '').slice(0, 200), seen: String(x.seen || '').slice(0, 1000), felt: String(x.felt || '').slice(0, 2000) }));
+  const ids = new Set(src.map((x) => x.id));
+  const clean = (arr: any[]) => {
+    const out = (Array.isArray(arr) ? arr : []).filter((x) => x && ids.has(String(x.id))).map((x) => ({ id: String(x.id), cap: String(x.cap || '').slice(0, 300), seen: String(x.seen || '').slice(0, 1500), felt: String(x.felt || '').slice(0, 3000) }));
+    return out.length ? { items: out } : null;
+  };
+  return {
+    prompt: 'Translate these travel-diary entries written in Korean by middle/high-school members of a Korean taekwondo demonstration team on a tour in Europe into natural, warm English for a printed photo book. Keep the student\'s voice and meaning; do not add facts. Keep proper nouns (places, Korean taekwondo terms) recognizable. Empty fields stay empty. Return the same ids.\n' + JSON.stringify(src),
+    plainHint: ' Reply with only a JSON array of objects {id, cap, seen, felt}.',
+    schema: { type: 'OBJECT', properties: { items: { type: 'ARRAY', items: { type: 'OBJECT', properties: { id: { type: 'STRING' }, cap: { type: 'STRING' }, seen: { type: 'STRING' }, felt: { type: 'STRING' } }, required: ['id'] } } }, required: ['items'] },
+    fromJson: (o) => clean(Array.isArray(o) ? o : o?.items),
+    fromText: (t) => { const m = t.match(/\[[\s\S]*\]/); if (!m) return null; try { return clean(JSON.parse(m[0])); } catch { return null; } },
+  };
+}
+
 async function gemini(task: Task) {
   const key = (Deno.env.get('GEMINI_API_KEY') || '').trim();
   if (!key) return { error: 'no_key' };
@@ -185,7 +202,7 @@ async function gemini(task: Task) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
-    const { tour_id, input, lang, mode, city, kind, food } = await req.json();
+    const { tour_id, input, lang, mode, city, kind, food, items } = await req.json();
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     // 이 원정의 지도자만 쓸 수 있음 (사용량 보호)
@@ -195,6 +212,11 @@ Deno.serve(async (req) => {
     const { data: tour } = await admin.from('tour_tours').select('id').eq('id', tour_id).eq('owner_id', who.user.id).maybeSingle();
     if (!tour) return json({ error: 'not_owner' });
 
+    if (mode === 'translate') {
+      const list = Array.isArray(items) ? items.slice(0, 25) : [];
+      if (!list.length) return json({ error: 'empty' });
+      return json(await gemini(translateTask(list)));
+    }
     if (mode === 'places') {
       const c = String(city || '').trim().slice(0, 80);
       if (!c) return json({ error: 'empty' });

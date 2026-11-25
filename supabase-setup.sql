@@ -485,3 +485,95 @@ begin
 end; $$;
 revoke all on function public.tour_clone(uuid, text, text, date, date, text[]) from public;
 grant execute on function public.tour_clone(uuid, text, text, date, date, text[]) to authenticated;
+
+-- ===== 학생 견학 일기 (책자 만들기용) =====
+-- 학생은 매일 「오늘의 한 장」·사진·본 것·느낀 것·현지어 한마디·기분을 남기고, 지도자는 책자에 넣을 일기를 고릅니다.
+alter table public.tour_members add column if not exists up_key uuid not null default gen_random_uuid();
+create table if not exists public.tour_diary (
+  id uuid primary key default gen_random_uuid(),
+  tour_id uuid not null references public.tour_tours(id) on delete cascade,
+  member_id uuid not null references public.tour_members(id) on delete cascade,
+  date date not null,
+  best text not null default '',          -- 오늘의 한 장 (사진 경로)
+  best_cap text not null default '',      -- 한 줄 설명
+  photos jsonb not null default '[]',     -- [{p: 경로, cap: 설명, stop: 일정 id}]
+  stops uuid[] not null default '{}',     -- 오늘 다녀온 곳
+  seen text not null default '',
+  felt text not null default '',
+  word text not null default '',
+  mood int,
+  pick boolean not null default false,    -- 지도자가 책자에 넣기로 고름
+  en jsonb,                               -- 영어 번역 {cap, seen, felt}
+  updated_at timestamptz not null default now(),
+  unique (member_id, date)
+);
+alter table public.tour_diary enable row level security;
+drop policy if exists tour_diary_owner on public.tour_diary;
+create policy tour_diary_owner on public.tour_diary for all to authenticated
+  using (public.tour_is_owner(tour_id)) with check (public.tour_is_owner(tour_id));
+
+create or replace function public.tour_diary_list(p_token uuid)
+returns json language plpgsql security definer set search_path = public as $$
+declare m tour_members;
+begin
+  select * into m from tour_members where token = p_token;
+  if m.id is null then raise exception 'bad_token'; end if;
+  return json_build_object('up_key', m.up_key,
+    'entries', coalesce((select json_agg(d order by d.date) from tour_diary d where d.member_id = m.id), '[]'::json));
+end; $$;
+revoke all on function public.tour_diary_list(uuid) from public;
+grant execute on function public.tour_diary_list(uuid) to anon, authenticated;
+
+create or replace function public.tour_diary_save(p_token uuid, p_date date, p_d jsonb)
+returns json language plpgsql security definer set search_path = public as $$
+declare m tour_members; pre text; ph jsonb := '[]'::jsonb; x jsonb; r tour_diary; st uuid[] := '{}';
+begin
+  select * into m from tour_members where token = p_token;
+  if m.id is null then raise exception 'bad_token'; end if;
+  if p_date is null or abs(p_date - current_date) > 400 then raise exception 'bad_date'; end if;
+  pre := 'diary/' || m.up_key::text || '/';
+  for x in select * from jsonb_array_elements(coalesce(p_d->'photos', '[]'::jsonb)) limit 8 loop
+    if left(x->>'p', length(pre)) = pre then
+      ph := ph || jsonb_build_object('p', x->>'p', 'cap', left(coalesce(x->>'cap', ''), 120), 'stop', nullif(x->>'stop', ''));
+    end if;
+  end loop;
+  begin
+    select coalesce(array_agg(s.id), '{}') into st from tour_stops s
+    where s.tour_id = m.tour_id and s.id::text in (select jsonb_array_elements_text(coalesce(p_d->'stops', '[]'::jsonb)));
+  exception when others then st := '{}'; end;
+  insert into tour_diary (tour_id, member_id, date, best, best_cap, photos, stops, seen, felt, word, mood, updated_at)
+  values (m.tour_id, m.id, p_date,
+    case when left(coalesce(p_d->>'best', ''), length(pre)) = pre then p_d->>'best' else '' end,
+    left(coalesce(p_d->>'best_cap', ''), 120), ph, st,
+    left(coalesce(p_d->>'seen', ''), 1000), left(coalesce(p_d->>'felt', ''), 2000), left(coalesce(p_d->>'word', ''), 120),
+    case when (p_d->>'mood') ~ '^[1-5]$' then (p_d->>'mood')::int end, now())
+  on conflict (member_id, date) do update set best = excluded.best, best_cap = excluded.best_cap, photos = excluded.photos, stops = excluded.stops,
+    seen = excluded.seen, felt = excluded.felt, word = excluded.word, mood = excluded.mood, en = null, updated_at = now()
+  returning * into r;
+  return row_to_json(r);
+end; $$;
+revoke all on function public.tour_diary_save(uuid, date, jsonb) from public;
+grant execute on function public.tour_diary_save(uuid, date, jsonb) to anon, authenticated;
+
+-- 학생 사진 올리기: diary/<학생 올리기 열쇠>/... 폴더에만 (열쇠는 로그인용 열쇠와 다름)
+create or replace function public.tour_diary_path_ok(p text) returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare k uuid;
+begin
+  if split_part(p, '/', 1) <> 'diary' then return false; end if;
+  begin k := split_part(p, '/', 2)::uuid; exception when others then return false; end;
+  return exists (select 1 from tour_members where up_key = k);
+end; $$;
+grant execute on function public.tour_diary_path_ok(text) to anon, authenticated;
+drop policy if exists tour_diary_photo_insert on storage.objects;
+create policy tour_diary_photo_insert on storage.objects for insert to anon, authenticated
+  with check (bucket_id = 'tour-photos' and public.tour_diary_path_ok(name));
+drop policy if exists tour_diary_photo_delete on storage.objects;
+create policy tour_diary_photo_delete on storage.objects for delete to anon, authenticated
+  using (bucket_id = 'tour-photos' and public.tour_diary_path_ok(name));
+
+do $$ begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'tour_diary') then
+    alter publication supabase_realtime add table public.tour_diary;
+  end if;
+end $$;
